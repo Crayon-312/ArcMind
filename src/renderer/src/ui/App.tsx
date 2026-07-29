@@ -1,4 +1,4 @@
-import { Brain, Check, ChevronDown, FileText, Mic, MicOff, Pencil, Plus, Send, Settings, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react'
+import { Brain, Check, ChevronDown, FileText, Mic, MicOff, Pencil, PhoneCall, PhoneOff, Plus, RotateCcw, Send, Settings, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type {
   AiStreamEvent,
@@ -12,6 +12,7 @@ import type {
   PublicRealtimeVoiceConfig,
   RealtimeVoiceCapabilityResult,
   RealtimeVoiceConfig,
+  RealtimeVoiceSessionStatus,
   RuntimeInfo
 } from '../../../shared'
 import { deriveCoreMode } from '../../../shared'
@@ -19,6 +20,7 @@ import { useMicrophoneLevel } from '../audio/useMicrophoneLevel'
 import { ParticleCore } from '../visual/ParticleCore'
 import { resolveVisualSignal } from '../visual/signal'
 import { canUseSpeechSynthesis, createUtterance, shouldAutoSpeak } from '../voice/speech'
+import { startRealtimeVoiceSession, type RealtimeVoiceSession } from '../voice/realtimeVoiceSession'
 import { desktopBridgeUnavailableMessage, hasModelSettingsBridge } from './runtimeBridge'
 import { coreModeLabel, statusText } from './statusText'
 import { SystemTelemetryProjection } from './SystemTelemetryProjection'
@@ -77,6 +79,10 @@ export function App(): JSX.Element {
   const [realtimeVoiceDraft, setRealtimeVoiceDraft] = useState<Partial<RealtimeVoiceConfig>>({})
   const [realtimeVoiceCapability, setRealtimeVoiceCapability] = useState<RealtimeVoiceCapabilityResult | null>(null)
   const [testingRealtimeVoice, setTestingRealtimeVoice] = useState(false)
+  const [realtimeVoiceSettingsLoaded, setRealtimeVoiceSettingsLoaded] = useState(false)
+  const [realtimeVoiceSessionStatus, setRealtimeVoiceSessionStatus] =
+    useState<RealtimeVoiceSessionStatus>('ready')
+  const [realtimeVoiceMicrophoneMuted, setRealtimeVoiceMicrophoneMuted] = useState(false)
   const [memoryOpen, setMemoryOpen] = useState(false)
   const [memories, setMemories] = useState<LongTermMemory[]>([])
   const [memoryDraft, setMemoryDraft] = useState('')
@@ -99,6 +105,9 @@ export function App(): JSX.Element {
   const composerOpenStateRef = useRef(composerOpen)
   const draftRef = useRef(draft)
   const recordingStatusRef = useRef(recordingStatus)
+  const realtimeVoiceSessionRef = useRef<RealtimeVoiceSession | null>(null)
+  const realtimeVoiceConnectGenerationRef = useRef(0)
+  const realtimeVoiceConnectAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     void window.arcMind?.getAppVersion().then(setVersion).catch(() => setVersion('0.1.0'))
@@ -124,6 +133,16 @@ export function App(): JSX.Element {
     recordingStatusRef.current = recordingStatus
   }, [recordingStatus])
 
+  useEffect(() => {
+    return () => {
+      realtimeVoiceConnectGenerationRef.current += 1
+      realtimeVoiceConnectAbortRef.current?.abort()
+      realtimeVoiceConnectAbortRef.current = null
+      realtimeVoiceSessionRef.current?.close()
+      realtimeVoiceSessionRef.current = null
+    }
+  }, [])
+
   const loadInitialConversation = async (): Promise<void> => {
     const conversation = await window.arcMind?.storage.getMostRecentConversation()
     if (conversation) {
@@ -139,9 +158,19 @@ export function App(): JSX.Element {
       muted,
       lastMessage: messages[messages.length - 1],
       transcribing: recordingStatus === 'transcribing',
-      speaking
+      speaking,
+      realtimeVoiceStatus: realtimeVoiceConfig?.enabled ? realtimeVoiceSessionStatus : undefined
     })
-  }, [conversationStatus, messages, microphone.status, muted, recordingStatus, speaking])
+  }, [
+    conversationStatus,
+    messages,
+    microphone.status,
+    muted,
+    realtimeVoiceConfig?.enabled,
+    realtimeVoiceSessionStatus,
+    recordingStatus,
+    speaking
+  ])
 
   const visualSignal = useMemo(
     () =>
@@ -178,7 +207,14 @@ export function App(): JSX.Element {
 
   const workbenchMessage = activeAssistantMessage ?? latestAssistantMessage
   const workbenchMarkdown = workbenchDocument.markdown || (workbenchMessage?.content ? stripWorkbenchMarkup(workbenchMessage.content) : '')
-  const composerVisible = composerOpen || recordingStatus !== 'idle'
+  const realtimeVoiceMode = Boolean(realtimeVoiceConfig?.enabled)
+  const composerVisible =
+    realtimeVoiceSettingsLoaded && !realtimeVoiceMode && (composerOpen || recordingStatus !== 'idle')
+  const realtimeVoiceCallActive =
+    realtimeVoiceSessionStatus === 'listening' ||
+    realtimeVoiceSessionStatus === 'thinking' ||
+    realtimeVoiceSessionStatus === 'speaking' ||
+    realtimeVoiceSessionStatus === 'muted'
 
   const submit = (): void => {
     const value = draft.trim()
@@ -564,6 +600,7 @@ export function App(): JSX.Element {
   const loadRealtimeVoiceSettings = async (): Promise<void> => {
     const bridge = window.arcMind
     if (!hasModelSettingsBridge(bridge)) {
+      setRealtimeVoiceSettingsLoaded(true)
       return
     }
 
@@ -581,12 +618,19 @@ export function App(): JSX.Element {
       setRealtimeVoiceCapability(capability)
       if (!capability.ok) {
         setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
+        if (config.enabled) {
+          setRealtimeVoiceSessionStatus('connection_error')
+          setErrorPulse((value) => value + 1)
+        }
+      } else if (config.enabled) {
+        setRealtimeVoiceSessionStatus('ready')
       }
 
       if (config.enabled && (capability.status === 'unsupported' || capability.status === 'auth_failed')) {
         const disabled = await bridge.settings.setRealtimeVoiceConfig({ enabled: false })
         setRealtimeVoiceConfig(disabled)
         setRealtimeVoiceDraft(disabled)
+        setRealtimeVoiceSessionStatus('ready')
       }
     } catch {
       setRealtimeVoiceCapability({
@@ -596,8 +640,11 @@ export function App(): JSX.Element {
         checkedAt: new Date().toISOString()
       })
       setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
+      setRealtimeVoiceSessionStatus('connection_error')
+      setErrorPulse((value) => value + 1)
     } finally {
       setTestingRealtimeVoice(false)
+      setRealtimeVoiceSettingsLoaded(true)
     }
   }
 
@@ -651,6 +698,11 @@ export function App(): JSX.Element {
       )
       setRealtimeVoiceConfig(next)
       setRealtimeVoiceDraft(next)
+      setRealtimeVoiceSessionStatus('ready')
+      setRealtimeVoiceMicrophoneMuted(false)
+      if (!next.enabled) {
+        stopRealtimeVoiceCall()
+      }
       setError(null)
     } catch (unknownError) {
       setError(userFacingErrorMessage(unknownError))
@@ -787,6 +839,106 @@ export function App(): JSX.Element {
     setError(result?.ok ? '模型配置可用。' : result?.error?.message ?? '模型配置不可用。')
   }
 
+  const startRealtimeVoiceCall = async (): Promise<void> => {
+    const bridge = window.arcMind
+    if (
+      !realtimeVoiceConfig?.enabled ||
+      typeof bridge?.voice?.createRealtimeCall !== 'function'
+    ) {
+      setRealtimeVoiceSessionStatus('connection_error')
+      setError('实时通话运行时不可用，请从 ArcMind 桌面应用启动。')
+      setErrorPulse((value) => value + 1)
+      return
+    }
+
+    const generation = realtimeVoiceConnectGenerationRef.current + 1
+    realtimeVoiceConnectGenerationRef.current = generation
+    realtimeVoiceConnectAbortRef.current?.abort()
+    const connectAbort = new AbortController()
+    realtimeVoiceConnectAbortRef.current = connectAbort
+    realtimeVoiceSessionRef.current?.close()
+    realtimeVoiceSessionRef.current = null
+    microphone.stop()
+    setRealtimeVoiceMicrophoneMuted(false)
+    setError(null)
+
+    try {
+      setTestingRealtimeVoice(true)
+      const capability = await bridge.settings.testRealtimeVoiceConfig()
+      setRealtimeVoiceCapability(capability)
+      if (!capability.ok) {
+        throw new Error(capability.message)
+      }
+    } catch (unknownError) {
+      if (realtimeVoiceConnectGenerationRef.current !== generation) {
+        return
+      }
+      setRealtimeVoiceSessionStatus('connection_error')
+      setError(userFacingErrorMessage(unknownError) || '实时语音能力检测失败。')
+      setErrorPulse((value) => value + 1)
+      return
+    } finally {
+      setTestingRealtimeVoice(false)
+    }
+
+    if (realtimeVoiceConnectGenerationRef.current !== generation) {
+      return
+    }
+
+    setRealtimeVoiceSessionStatus('connecting')
+    try {
+      const session = await startRealtimeVoiceSession({
+        bridge,
+        signal: connectAbort.signal,
+        onLocalStream: (stream) => microphone.start(stream),
+        onStateChange: (status) => {
+          if (realtimeVoiceConnectGenerationRef.current !== generation) {
+            return
+          }
+          setRealtimeVoiceSessionStatus(status)
+          if (status === 'connection_error') {
+            setError('实时通话连接已中断，请重试。')
+            setErrorPulse((value) => value + 1)
+          }
+        }
+      })
+
+      if (realtimeVoiceConnectGenerationRef.current !== generation) {
+        session.close()
+        return
+      }
+      realtimeVoiceSessionRef.current = session
+      realtimeVoiceConnectAbortRef.current = null
+    } catch (unknownError) {
+      if (realtimeVoiceConnectGenerationRef.current !== generation) {
+        return
+      }
+      microphone.stop()
+      setRealtimeVoiceSessionStatus('connection_error')
+      setError(userFacingErrorMessage(unknownError) || '实时通话连接失败。')
+      setErrorPulse((value) => value + 1)
+    }
+  }
+
+  const stopRealtimeVoiceCall = (): void => {
+    realtimeVoiceConnectGenerationRef.current += 1
+    realtimeVoiceConnectAbortRef.current?.abort()
+    realtimeVoiceConnectAbortRef.current = null
+    realtimeVoiceSessionRef.current?.close()
+    realtimeVoiceSessionRef.current = null
+    microphone.stop()
+    setRealtimeVoiceMicrophoneMuted(false)
+    setRealtimeVoiceSessionStatus('ready')
+    setError(null)
+  }
+
+  const toggleRealtimeVoiceMicrophone = (): void => {
+    const next = !realtimeVoiceMicrophoneMuted
+    setRealtimeVoiceMicrophoneMuted(next)
+    realtimeVoiceSessionRef.current?.setMicrophoneMuted(next)
+    setRealtimeVoiceSessionStatus(next ? 'muted' : 'listening')
+  }
+
   const toggleMic = async (): Promise<void> => {
     if (recordingStatus === 'recording') {
       mediaRecorder?.stop()
@@ -861,7 +1013,7 @@ export function App(): JSX.Element {
 
   return (
     <main
-      className={`app-shell ${conversationDrawerOpen ? 'is-conversation-drawer-open' : ''} ${toolRailOpen ? 'is-tool-rail-open' : ''} ${workbenchOpen ? 'is-workbench-open' : ''} ${composerVisible ? 'is-composer-open' : ''}`}
+      className={`app-shell ${realtimeVoiceMode ? 'is-realtime-voice' : 'is-text-chat'} ${conversationDrawerOpen ? 'is-conversation-drawer-open' : ''} ${toolRailOpen ? 'is-tool-rail-open' : ''} ${workbenchOpen ? 'is-workbench-open' : ''} ${composerVisible ? 'is-composer-open' : ''}`}
     >
       <ParticleCore mode={mode} signal={visualSignal} sidebarOpen={conversationDrawerOpen} workbenchOpen={workbenchOpen || settingsOpen || memoryOpen} composerOpen={composerVisible} />
 
@@ -978,34 +1130,113 @@ export function App(): JSX.Element {
             >
               <Settings size={16} />
             </button>
-            <button
-              className="tool-icon-button"
-              type="button"
-              title={speaking ? '停止播报' : muted ? '开启播报' : '关闭播报'}
-              onClick={() => {
-                if (speaking) {
-                  stopSpeaking()
-                  return
-                }
-                setMuted((value) => {
-                  const next = !value
-                  if (next) {
+            {!realtimeVoiceMode ? (
+              <button
+                className="tool-icon-button"
+                type="button"
+                title={speaking ? '停止播报' : muted ? '开启播报' : '关闭播报'}
+                onClick={() => {
+                  if (speaking) {
                     stopSpeaking()
+                    return
                   }
-                  return next
-                })
-              }}
-            >
-              {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-            </button>
+                  setMuted((value) => {
+                    const next = !value
+                    if (next) {
+                      stopSpeaking()
+                    }
+                    return next
+                  })
+                }}
+              >
+                {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+            ) : null}
           </aside>
         </div>
 
-        <section className="hero-stage" aria-label="ArcMind core status">
+        <section className={`hero-stage ${realtimeVoiceMode ? 'is-voice-mode' : ''}`} aria-label="ArcMind core status">
           <div className="core-readout">
             <span>弦核模式</span>
             <strong>{coreModeLabel(mode)}</strong>
           </div>
+          {realtimeVoiceMode ? (
+            <div className={`voice-call-panel is-${realtimeVoiceSessionStatus}`} aria-live="polite">
+              <div className="voice-call-copy">
+                <span>GPT-Live 实时通话</span>
+                <strong>{realtimeVoiceSessionTitle(realtimeVoiceSessionStatus, testingRealtimeVoice)}</strong>
+                <p>{realtimeVoiceSessionDescription(realtimeVoiceSessionStatus, testingRealtimeVoice)}</p>
+              </div>
+
+              {realtimeVoiceSessionStatus === 'ready' ? (
+                <button
+                  className="voice-primary-button"
+                  type="button"
+                  disabled={testingRealtimeVoice}
+                  onClick={() => void startRealtimeVoiceCall()}
+                >
+                  <PhoneCall size={20} />
+                  <span>{testingRealtimeVoice ? '正在检查能力' : '开始实时通话'}</span>
+                </button>
+              ) : null}
+
+              {realtimeVoiceSessionStatus === 'connecting' ? (
+                <div className="voice-connecting-state">
+                  <div className="voice-connecting-indicator" role="status">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <button type="button" onClick={stopRealtimeVoiceCall}>
+                    取消
+                  </button>
+                </div>
+              ) : null}
+
+              {realtimeVoiceCallActive ? (
+                <div className="voice-call-controls" aria-label="实时通话控制">
+                  <button
+                    className={`voice-control-button ${realtimeVoiceMicrophoneMuted ? 'is-muted' : ''}`}
+                    type="button"
+                    title={realtimeVoiceMicrophoneMuted ? '开启麦克风' : '麦克风静音'}
+                    aria-label={realtimeVoiceMicrophoneMuted ? '开启麦克风' : '麦克风静音'}
+                    onClick={toggleRealtimeVoiceMicrophone}
+                  >
+                    {realtimeVoiceMicrophoneMuted ? <MicOff size={20} /> : <Mic size={20} />}
+                  </button>
+                  <button
+                    className="voice-control-button is-hangup"
+                    type="button"
+                    title="结束通话"
+                    aria-label="结束通话"
+                    onClick={stopRealtimeVoiceCall}
+                  >
+                    <PhoneOff size={20} />
+                  </button>
+                </div>
+              ) : null}
+
+              {realtimeVoiceSessionStatus === 'connection_error' ? (
+                <div className="voice-recovery-actions">
+                  <button type="button" onClick={() => void startRealtimeVoiceCall()}>
+                    <RotateCcw size={16} />
+                    重试
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsOpen(true)
+                      setMemoryOpen(false)
+                      setWorkbenchOpen(false)
+                    }}
+                  >
+                    <Settings size={16} />
+                    设置
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </section>
 
         <SystemTelemetryProjection hidden={workbenchOpen || settingsOpen || memoryOpen} />
@@ -1042,82 +1273,78 @@ export function App(): JSX.Element {
           ) : null}
         </section>
 
-        <div
-          className="composer-zone"
-          ref={composerZoneRef}
-          onPointerEnter={handleComposerPointerEnter}
-          onPointerMove={handleComposerPointerEnter}
-          onPointerLeave={(event) => handleComposerPointerLeave(event.relatedTarget)}
-          onMouseEnter={handleComposerMouseEnter}
-          onMouseMove={handleComposerMouseEnter}
-          onMouseLeave={(event) => handleComposerMouseLeave(event.relatedTarget)}
-          onFocus={handleComposerFocus}
-          onBlur={(event) => handleComposerBlur(event.relatedTarget)}
-        >
-          <button className="composer-handle" type="button" title="输入" onClick={revealComposer}>
-            <span />
-          </button>
-        </div>
+        {realtimeVoiceSettingsLoaded && !realtimeVoiceMode ? (
+          <>
+            <div
+              className="composer-zone"
+              ref={composerZoneRef}
+              onPointerEnter={handleComposerPointerEnter}
+              onPointerMove={handleComposerPointerEnter}
+              onPointerLeave={(event) => handleComposerPointerLeave(event.relatedTarget)}
+              onMouseEnter={handleComposerMouseEnter}
+              onMouseMove={handleComposerMouseEnter}
+              onMouseLeave={(event) => handleComposerMouseLeave(event.relatedTarget)}
+              onFocus={handleComposerFocus}
+              onBlur={(event) => handleComposerBlur(event.relatedTarget)}
+            >
+              <button className="composer-handle" type="button" title="输入" onClick={revealComposer}>
+                <span />
+              </button>
+            </div>
 
-        <div className={`composer-impact ${composerVisible ? 'is-active' : ''}`} aria-hidden="true">
-          <span className="impact-edge" />
-          <span className="impact-spark impact-spark-a" />
-          <span className="impact-spark impact-spark-b" />
-          <span className="impact-spark impact-spark-c" />
-        </div>
+            <div className={`composer-impact ${composerVisible ? 'is-active' : ''}`} aria-hidden="true">
+              <span className="impact-edge" />
+              <span className="impact-spark impact-spark-a" />
+              <span className="impact-spark impact-spark-b" />
+              <span className="impact-spark impact-spark-c" />
+            </div>
 
-        <div className={`composer-source-ripple ${composerVisible ? 'is-active' : ''}`} aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+            <div className={`composer-source-ripple ${composerVisible ? 'is-active' : ''}`} aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
 
-        <footer
-          className={`composer ${composerVisible ? 'is-open' : ''}`}
-          ref={composerPanelRef}
-          onPointerEnter={handleComposerPointerEnter}
-          onPointerMove={handleComposerPointerEnter}
-          onPointerLeave={(event) => handleComposerPointerLeave(event.relatedTarget)}
-          onMouseEnter={handleComposerMouseEnter}
-          onMouseMove={handleComposerMouseEnter}
-          onMouseLeave={(event) => handleComposerMouseLeave(event.relatedTarget)}
-          onFocus={handleComposerFocus}
-          onBlur={(event) => handleComposerBlur(event.relatedTarget)}
-        >
-          <button className="composer-collapse-button" type="button" title="收起输入框" aria-label="收起输入框" onClick={collapseComposer}>
-            <ChevronDown size={16} />
-          </button>
-          <button
-            className={`round-button ${microphone.status === 'listening' ? 'is-active' : ''}`}
-            type="button"
-            title={recordingStatus === 'recording' ? '停止录音' : recordingStatus === 'transcribing' ? '正在转写' : '点击说话'}
-            onClick={() => void toggleMic()}
-          >
-            {recordingStatus === 'recording' ? <MicOff size={20} /> : <Mic size={20} />}
-          </button>
-          <input
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value)
-              revealComposer()
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                submit()
-              }
-            }}
-            placeholder={recordingStatus === 'transcribing' ? '正在转写语音...' : '输入一句话，先让弧核亮起来...'}
-            aria-label="输入消息"
-          />
-          <button
-            className="icon-button send-button"
-            type="button"
-            title={conversationStatus === 'streaming' ? '停止' : '发送'}
-            onClick={conversationStatus === 'streaming' ? cancel : submit}
-          >
-            {conversationStatus === 'streaming' ? <Square size={16} /> : <Send size={18} />}
-          </button>
-        </footer>
+            <footer
+              className={`composer is-text-only ${composerVisible ? 'is-open' : ''}`}
+              ref={composerPanelRef}
+              onPointerEnter={handleComposerPointerEnter}
+              onPointerMove={handleComposerPointerEnter}
+              onPointerLeave={(event) => handleComposerPointerLeave(event.relatedTarget)}
+              onMouseEnter={handleComposerMouseEnter}
+              onMouseMove={handleComposerMouseEnter}
+              onMouseLeave={(event) => handleComposerMouseLeave(event.relatedTarget)}
+              onFocus={handleComposerFocus}
+              onBlur={(event) => handleComposerBlur(event.relatedTarget)}
+            >
+              <button className="composer-collapse-button" type="button" title="收起输入框" aria-label="收起输入框" onClick={collapseComposer}>
+                <ChevronDown size={16} />
+              </button>
+              <input
+                value={draft}
+                onChange={(event) => {
+                  setDraft(event.target.value)
+                  revealComposer()
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    submit()
+                  }
+                }}
+                placeholder="输入文字消息..."
+                aria-label="输入消息"
+              />
+              <button
+                className="icon-button send-button"
+                type="button"
+                title={conversationStatus === 'streaming' ? '停止' : '发送'}
+                onClick={conversationStatus === 'streaming' ? cancel : submit}
+              >
+                {conversationStatus === 'streaming' ? <Square size={16} /> : <Send size={18} />}
+              </button>
+            </footer>
+          </>
+        ) : null}
 
         {settingsOpen ? (
           <section className="settings-panel" aria-label="模型与实时语音设置">
@@ -1309,10 +1536,50 @@ export function App(): JSX.Element {
           </section>
         ) : null}
 
-        {microphone.error || error ? <p className="error-line">{microphone.error ?? error}</p> : null}
+        {!realtimeVoiceMode && (microphone.error || error) ? (
+          <p className="error-line">{microphone.error ?? error}</p>
+        ) : null}
       </section>
     </main>
   )
+}
+
+function realtimeVoiceSessionTitle(
+  status: RealtimeVoiceSessionStatus,
+  checking: boolean
+): string {
+  if (checking && status === 'ready') {
+    return '正在确认通话能力'
+  }
+  const labels: Record<RealtimeVoiceSessionStatus, string> = {
+    ready: '准备好后，由你开始',
+    connecting: '正在连接',
+    listening: '正在倾听',
+    thinking: '正在思考',
+    speaking: '正在回答',
+    muted: '麦克风已静音',
+    connection_error: '连接失败'
+  }
+  return labels[status]
+}
+
+function realtimeVoiceSessionDescription(
+  status: RealtimeVoiceSessionStatus,
+  checking: boolean
+): string {
+  if (checking && status === 'ready') {
+    return '正在检查 codex-LB 实时语音路由，不会自动开启麦克风。'
+  }
+  const descriptions: Record<RealtimeVoiceSessionStatus, string> = {
+    ready: '点击后才会申请麦克风权限，并建立实时语音会话。',
+    connecting: '正在协商安全的实时音频连接，请稍候。',
+    listening: '可以直接说话，也可以随时打断回答。',
+    thinking: '已收到你的声音，正在组织回答。',
+    speaking: '正在实时播放回答，你可以随时打断。',
+    muted: '对方听不到你的声音，点击麦克风即可恢复。',
+    connection_error: '仍停留在实时通话模式，请重试或检查设置。'
+  }
+  return descriptions[status]
 }
 
 function withoutBlankApiKey(input: Partial<ModelConfig>): Partial<ModelConfig> {

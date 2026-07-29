@@ -1,12 +1,31 @@
 export type ChatRole = 'system' | 'user' | 'assistant'
 
-export type CoreMode = 'idle' | 'listening' | 'transcribing' | 'thinking' | 'speaking' | 'muted' | 'error'
+export type CoreMode =
+  | 'idle'
+  | 'ready'
+  | 'connecting'
+  | 'listening'
+  | 'transcribing'
+  | 'thinking'
+  | 'speaking'
+  | 'muted'
+  | 'connection_error'
+  | 'error'
 
 export type ConversationStatus = 'idle' | 'streaming' | 'cancelled' | 'error'
 
 export type ModelProvider = 'openai-compatible'
 
 export type RealtimeVoiceProvider = 'codex-lb-live'
+
+export type RealtimeVoiceSessionStatus =
+  | 'ready'
+  | 'connecting'
+  | 'listening'
+  | 'thinking'
+  | 'speaking'
+  | 'muted'
+  | 'connection_error'
 
 export type RealtimeVoiceCapabilityStatus =
   | 'not_configured'
@@ -203,6 +222,14 @@ export interface TranscribeAudioInput {
 
 export interface TranscribeAudioResult {
   text: string
+}
+
+export interface CreateRealtimeVoiceCallInput {
+  sdp: string
+}
+
+export interface CreateRealtimeVoiceCallResult {
+  sdp: string
 }
 
 export interface SpeakTextInput {

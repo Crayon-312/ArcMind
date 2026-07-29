@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import type {
+  CreateRealtimeVoiceCallInput,
   CreateMemoryInput,
   ModelConfig,
   RealtimeVoiceConfig,
@@ -20,6 +21,7 @@ import { ConversationRepository } from './storage/conversationRepository'
 import { getSystemTelemetrySnapshot } from './system/systemTelemetry'
 import { transcribeOpenAiCompatibleAudio } from './voice/asrRuntime'
 import { probeRealtimeVoiceCapability } from './voice/realtimeVoiceCapability'
+import { createRealtimeVoiceCall } from './voice/realtimeVoiceCall'
 
 const chatRuntime = new ChatRuntime()
 let modelConfigStore: ModelConfigStore | null = null
@@ -158,6 +160,14 @@ app.whenReady().then(async () => {
       ? await requireRealtimeVoiceConfigStore().preview(input)
       : await requireRealtimeVoiceConfigStore().get()
     return probeRealtimeVoiceCapability(config)
+  })
+  ipcMain.handle('voice:create-realtime-call', async (_, input: CreateRealtimeVoiceCallInput) => {
+    try {
+      const config = await requireRealtimeVoiceConfigStore().get()
+      return await createRealtimeVoiceCall(config, input)
+    } catch (error) {
+      throw toIpcError(error)
+    }
   })
   ipcMain.handle('chat:send-message', async (event, input: SendChatMessageInput) => {
     try {

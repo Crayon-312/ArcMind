@@ -27,11 +27,14 @@ const FALLBACK_SIGNAL: VisualSignal = {
 
 const MODE_COLORS: Record<CoreMode, THREE.Color> = {
   idle: new THREE.Color('#7fd8ff'),
+  ready: new THREE.Color('#7fd8ff'),
+  connecting: new THREE.Color('#88e6ff'),
   listening: new THREE.Color('#00f5d4'),
   transcribing: new THREE.Color('#8bd3ff'),
   thinking: new THREE.Color('#f4d28a'),
   speaking: new THREE.Color('#a6ffcb'),
-  muted: new THREE.Color('#6f7f89'),
+  muted: new THREE.Color('#d9a85f'),
+  connection_error: new THREE.Color('#ff5367'),
   error: new THREE.Color('#ff5367')
 }
 
@@ -388,27 +391,44 @@ export function ParticleCore({ mode, signal, sidebarOpen = false, workbenchOpen 
       interaction.rotationX += (interaction.targetRotationX - interaction.rotationX) * 0.12
       interaction.rotationY += (interaction.targetRotationY - interaction.rotationY) * 0.12
       interaction.zoom += (interaction.targetZoom - interaction.zoom) * 0.12
-      const syntheticBreath = (Math.sin(elapsed * 1.28) + 1) * 0.5
+      const breathSpeed = currentMode === 'ready' ? 0.72 : currentMode === 'muted' ? 0.58 : 1.28
+      const syntheticBreath = (Math.sin(elapsed * breathSpeed) + 1) * 0.5
       const startupEnergy = Math.max(0, 1 - elapsed / 2.8)
       const breath = Math.max(audio.level, syntheticBreath * 0.18)
       const audioDrive = audio.low * 0.5 + audio.mid * 0.28 + audio.high * 0.22
       const thinkingPull = currentSignal.thinkingLevel * (0.052 + Math.sin(elapsed * 1.4) * 0.012)
-      const orbitAcceleration = clamp(audio.mid * 0.045 + audio.rhythm * 0.07 + currentSignal.thinkingLevel * 0.032 + tokenBurst * 0.012, 0, 0.09)
+      const connectingPull =
+        currentMode === 'connecting' ? 0.1 + (Math.sin(elapsed * 2.4) + 1) * 0.025 : 0
+      const speakingExpansion =
+        currentMode === 'speaking' ? (Math.sin(elapsed * 2.15) + 1) * 0.038 : 0
+      const orbitAcceleration = clamp(
+        audio.mid * 0.045 +
+          audio.rhythm * 0.07 +
+          currentSignal.thinkingLevel * 0.032 +
+          (currentMode === 'connecting' ? 0.045 : 0) +
+          tokenBurst * 0.012,
+        0,
+        0.12
+      )
       const modeColor = MODE_COLORS[currentMode]
       const modeEnergy =
-        currentMode === 'listening'
-          ? 1.24
-          : currentMode === 'transcribing'
-            ? 1.1
-          : currentMode === 'thinking'
-            ? 1.14
-            : currentMode === 'speaking'
-              ? 1.32
-              : currentMode === 'error'
-                ? 1.08
-                : currentMode === 'muted'
-                  ? 0.76
-                  : 1
+        currentMode === 'ready'
+          ? 0.94
+          : currentMode === 'connecting'
+            ? 1.12
+            : currentMode === 'listening'
+              ? 1.24
+              : currentMode === 'transcribing'
+                ? 1.1
+                : currentMode === 'thinking'
+                  ? 1.14
+                  : currentMode === 'speaking'
+                    ? 1.32
+                    : currentMode === 'error' || currentMode === 'connection_error'
+                      ? 1.08
+                      : currentMode === 'muted'
+                        ? 0.76
+                        : 1
       const energy = modeEnergy + tokenBurst * 0.12 + errorBurst * 0.18 + startupEnergy * 0.18
 
       for (let i = 0; i < particleCount; i += 1) {
@@ -432,7 +452,14 @@ export function ParticleCore({ mode, signal, sidebarOpen = false, workbenchOpen 
         const tokenRipple = Math.sin(elapsed * 6.2 + i * 0.047) * tokenBurst * (0.018 + lane * 0.002)
         const speakingRipple = Math.sin(elapsed * (2.1 + audio.high * 3.2) + i * 0.021) * currentSignal.speakingLevel * (0.025 + audio.high * 0.07)
         const orbitalFlicker = Math.sin(elapsed * (1.42 + lane * 0.07) + i * 0.029) * (0.012 + breath * 0.018)
-        const pulse = (1 - thinkingPull) + breath * (0.1 + lane * 0.018) * energy + orbitalFlicker + tokenRipple + audio.low * 0.06 + composerRipple * 0.08 + composerImpulse * composerSheet * 0.035
+        const pulse =
+          (1 - thinkingPull - connectingPull + speakingExpansion) +
+          breath * (0.1 + lane * 0.018) * energy +
+          orbitalFlicker +
+          tokenRipple +
+          audio.low * 0.06 +
+          composerRipple * 0.08 +
+          composerImpulse * composerSheet * 0.035
         const wave =
           Math.sin(elapsed * (0.75 + lane * 0.04 + audio.high * 0.42) + i * 0.019) * (0.04 + breath * 0.18 + audio.rhythm * 0.1) + speakingRipple
         const twist = elapsed * (0.12 + lane * 0.01 + orbitAcceleration)
@@ -464,7 +491,13 @@ export function ParticleCore({ mode, signal, sidebarOpen = false, workbenchOpen 
       group.position.x = horizontalInfluence
       group.position.y = composerImpulse * COMPOSER_CORE_PUSH
       group.position.z = composerImpulse * 0.08
-      group.scale.setScalar(1.18 + sidebarInfluence * 0.04 + composerImpulse * COMPOSER_GROUP_SCALE)
+      group.scale.setScalar(
+        1.18 -
+          connectingPull * 0.34 +
+          speakingExpansion * 0.34 +
+          sidebarInfluence * 0.04 +
+          composerImpulse * COMPOSER_GROUP_SCALE
+      )
       group.rotation.y = elapsed * (0.055 + orbitAcceleration * 0.44) + interaction.rotationY + sidebarInfluence * 0.42 - workbenchInfluence * 0.24 + composerImpulse * 0.032
       group.rotation.x = Math.sin(elapsed * 0.22) * 0.08 + interaction.rotationX - sidebarInfluence * 0.08 + workbenchInfluence * 0.04 - composerImpulse * 0.045
       camera.position.x = sidebarInfluence * 0.62 - workbenchInfluence * 0.34
@@ -483,14 +516,30 @@ export function ParticleCore({ mode, signal, sidebarOpen = false, workbenchOpen 
         const waveform = Math.sin(elapsed * (2.8 + audio.mid * 3) + index * 1.8) * (audio.rhythm * 0.06 + currentSignal.speakingLevel * audio.high * 0.05)
         const phase = typeof ring.userData.phase === 'number' ? ring.userData.phase : 0
         ring.rotation.z = phase + elapsed * (0.09 + index * 0.026 + audio.mid * 0.035)
-        ring.scale.setScalar(0.88 + index * 0.12 + breath * (0.05 + index * 0.014) + waveform + tokenBurst * 0.012 + composerImpulse * (0.07 + index * 0.02))
+        ring.scale.setScalar(
+          0.88 +
+            index * 0.12 -
+            connectingPull * (0.7 + index * 0.08) +
+            speakingExpansion * (0.8 + index * 0.12) +
+            breath * (0.05 + index * 0.014) +
+            waveform +
+            tokenBurst * 0.012 +
+            composerImpulse * (0.07 + index * 0.02)
+        )
         const ringMat = ring.material as THREE.MeshBasicMaterial
         ringMat.color.lerp(errorBurst > 0.12 ? MODE_COLORS.error : modeColor, 0.025)
         ringMat.opacity = profile.advancedGlow ? 0.055 + breath * 0.05 + tokenBurst * 0.035 + composerImpulse * 0.06 : 0.045 + breath * 0.035 + composerImpulse * 0.04
       })
 
       material.size = 0.022 + breath * 0.026 + audio.low * 0.008 + tokenBurst * 0.002 + startupEnergy * 0.004 + composerImpulse * 0.005
-      material.opacity = currentMode === 'error' ? 0.82 + errorBurst * 0.12 : profile.advancedGlow ? 0.9 + composerImpulse * 0.08 : 0.76 + composerImpulse * 0.08
+      material.opacity =
+        currentMode === 'error' || currentMode === 'connection_error'
+          ? 0.82 + errorBurst * 0.12
+          : currentMode === 'muted'
+            ? 0.68
+            : profile.advancedGlow
+              ? 0.9 + composerImpulse * 0.08
+              : 0.76 + composerImpulse * 0.08
       renderer.render(scene, camera)
       scheduleNextFrame()
     }

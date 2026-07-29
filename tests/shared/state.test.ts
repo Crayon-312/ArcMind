@@ -49,5 +49,25 @@ describe('deriveCoreMode', () => {
       })
     ).toBe('error')
   })
+
+  it('uses the realtime voice lifecycle as the visual source of truth', () => {
+    expect(
+      deriveCoreMode({
+        conversationStatus: 'streaming',
+        microphoneStatus: 'error',
+        muted: false,
+        realtimeVoiceStatus: 'connecting'
+      })
+    ).toBe('connecting')
+
+    expect(
+      deriveCoreMode({
+        conversationStatus: 'idle',
+        microphoneStatus: 'idle',
+        muted: false,
+        realtimeVoiceStatus: 'connection_error'
+      })
+    ).toBe('connection_error')
+  })
 })
 

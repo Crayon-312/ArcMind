@@ -3,7 +3,18 @@ import type { AiStreamEvent, AppError, AudioSignal, ChatMessage, ConversationSta
 
 describe('shared type contracts', () => {
   it('keeps the baseline shared contracts importable from src/shared', () => {
-    expectTypeOf<CoreMode>().toEqualTypeOf<'idle' | 'listening' | 'transcribing' | 'thinking' | 'speaking' | 'muted' | 'error'>()
+    expectTypeOf<CoreMode>().toEqualTypeOf<
+      | 'idle'
+      | 'ready'
+      | 'connecting'
+      | 'listening'
+      | 'transcribing'
+      | 'thinking'
+      | 'speaking'
+      | 'muted'
+      | 'connection_error'
+      | 'error'
+    >()
     expectTypeOf<ChatMessage>().toHaveProperty('content').toEqualTypeOf<string>()
     expectTypeOf<ConversationState>().toHaveProperty('activeRequestId').toEqualTypeOf<string | null>()
     expectTypeOf<LongTermMemory>().toHaveProperty('enabled').toEqualTypeOf<boolean>()

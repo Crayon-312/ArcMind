@@ -1,4 +1,4 @@
-import type { ChatMessage, ConversationState, CoreMode } from './types'
+import type { ChatMessage, ConversationState, CoreMode, RealtimeVoiceSessionStatus } from './types'
 
 export interface CoreModeInput {
   conversationStatus: ConversationState['status']
@@ -7,9 +7,14 @@ export interface CoreModeInput {
   lastMessage?: Pick<ChatMessage, 'role'> | null
   transcribing?: boolean
   speaking?: boolean
+  realtimeVoiceStatus?: RealtimeVoiceSessionStatus
 }
 
 export function deriveCoreMode(input: CoreModeInput): CoreMode {
+  if (input.realtimeVoiceStatus) {
+    return input.realtimeVoiceStatus
+  }
+
   if (input.microphoneStatus === 'error' || input.microphoneStatus === 'denied' || input.conversationStatus === 'error') {
     return 'error'
   }

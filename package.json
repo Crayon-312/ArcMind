@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "smoke": "npm run build && electron scripts/smoke-electron.cjs",
+    "smoke:voice-ui": "npm run build && electron scripts/smoke-realtime-voice-ui.cjs",
     "agent:check": "powershell -ExecutionPolicy Bypass -File scripts/check-agent-system.ps1",
     "package:win": "npm run build && electron-builder --win nsis"
   },

@@ -4,6 +4,15 @@
 
 ## 已采纳
 
+### 2026-07-29：实时语音启用时采用通话优先交互和七状态视觉
+
+- 状态：已采纳。
+- 决策：已保存且检测通过的 `codex-lb-live` 配置启用后，首屏不显示文字输入，用户显式点击后才申请麦克风并创建 WebRTC 会话；未启用实时语音时才使用文字聊天。临时连接失败停留在通话界面，提供重试和设置，不自动降级文字。
+- 状态：正式视觉状态为 `ready`、`connecting`、`listening`、`thinking`、`speaking`、`muted`、`connection_error`，分别对应慢呼吸、向内收束、音量波纹、聚合内收、持续外扩、琥珀弱提示、红色短闪后保持可重试。
+- 进程边界：renderer 创建 peer connection、采集麦克风和播放远端音频；main process 使用本机 codex-LB 密钥提交 SDP 并返回远端 SDP。密钥不进入 renderer，音频不经 main process，也不落盘。
+- 证据：OpenAI 官方 WebRTC 指南确认浏览器负责 peer connection、麦克风、远端音频和数据通道，服务端负责携带密钥提交 SDP；codex-LB `docs/live-voice.md` 与测试确认私有 `/backend-api/codex/realtime/calls` 接受 `application/sdp` 并返回 SDP，但不代理 WebRTC 媒体。
+- 边界：codex-LB 私有控制侧事件不是公共稳定契约，因此视觉状态同时使用连接状态、远端真实音量和已知实时事件，未知事件安全忽略；真实账户权益、麦克风权限和远端音频必须在 Electron 中手动验证。
+
 ### 2026-07-29：GPT-Live 实时语音采用 codex-LB 专用配置和失败关闭门禁
 
 - 状态：已采纳。
@@ -12,7 +21,7 @@
 - 门禁：只有检测状态为 `available` 才允许用户在界面选择启用；保存 `enabled: true` 时 main process 必须再次检测，失败则拒绝持久化。地址或密钥草稿变化后，renderer 立即使旧检测结果失效并关闭草稿中的启用状态。
 - 已验证事实：以上路由和密钥要求来自 2026-07-29 检查的 `Soju06/codex-lb` 当前源码与 `docs/live-voice.md`。codex-LB 明确说明这是已安装 Codex 应用使用的私有兼容面，不是 OpenAI 公共 Realtime API，也不代理 WebRTC 媒体。
 - 官方边界：OpenAI 的 [Realtime and audio](https://developers.openai.com/api/docs/guides/realtime) 文档说明，公共 GA WebRTC 流程使用 `POST /v1/realtime/client_secrets` 和 `/v1/realtime/calls`；这与本项目当前探测的 codex-LB 私有 `/backend-api/codex/realtime/calls` 路径不同。
-- 边界：该检测只能确认 codex-LB 服务、Live Voice 路由和代理密钥；ChatGPT 账户实际语音权益只能在后续建立真实会话时由上游最终确认。当前任务不实现 WebRTC 媒体、WebSocket 控制侧通道或实时通话状态机。
+- 边界：该检测只能确认 codex-LB 服务、Live Voice 路由和代理密钥；ChatGPT 账户实际语音权益只能在建立真实会话时由上游最终确认。后续决策已经在 renderer/main 分层实现 WebRTC 通话创建与实时通话状态机；私有 WebSocket 控制侧通道仍不是本项目依赖的稳定公共契约。
 - 原因：实时语音协议与普通 OpenAI-compatible 文字接口不是同一能力。独立配置可以保留任意文字模型供应商，同时以失败关闭方式防止不支持的中转服务被误启用。
 
 ### 2026-06-30：v1 模型接入采用 OpenAI-compatible HTTP 适配层

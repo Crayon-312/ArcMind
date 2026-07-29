@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
   AiStreamEvent,
+  CreateRealtimeVoiceCallInput,
+  CreateRealtimeVoiceCallResult,
   CreateMemoryInput,
   ConversationState,
   ConversationSummary,
@@ -63,6 +65,8 @@ const api = {
     deleteMemory: (id: string): Promise<void> => ipcRenderer.invoke('storage:delete-memory', id)
   },
   voice: {
+    createRealtimeCall: (input: CreateRealtimeVoiceCallInput): Promise<CreateRealtimeVoiceCallResult> =>
+      ipcRenderer.invoke('voice:create-realtime-call', input),
     transcribe: (input: TranscribeAudioInput): Promise<TranscribeAudioResult> => ipcRenderer.invoke('voice:transcribe', input),
     speak: (input: SpeakTextInput): Promise<void> => Promise.resolve(),
     stopSpeaking: (): Promise<void> => Promise.resolve()

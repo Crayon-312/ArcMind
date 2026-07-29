@@ -8,7 +8,7 @@
 
 ## 公共接口
 
-- 输入：`idle`、`listening`、`transcribing`、`thinking`、`speaking`、`muted`、`error` 等状态。
+- 输入：`idle`、`ready`、`connecting`、`listening`、`transcribing`、`thinking`、`speaking`、`muted`、`connection_error`、`error` 等状态。
 - 输入：可选音量、流式 token 节奏、错误级别等轻量信号。
 - 输出：仅限视觉事件或性能状态，不直接修改聊天业务数据。
 - 当前 renderer 使用共享 `VisualSignal` 将音频频段、token 脉冲、错误闪断、思考强度和播报强度传入 `ParticleCore`。
@@ -20,6 +20,7 @@
 - 当前 `ParticleCore` 已按设备像素比和 CPU 并发数选择 `low`、`medium`、`high` 性能档位，调整粒子数量、像素比、轨道环数量和高级光效。
 - 窗口或页面失焦后，视觉动画必须降到低频刷新；恢复可见后必须显式重启 `requestAnimationFrame` 调度，避免从后台回来后弦核停帧。
 - 当前 `ParticleCore` 已支持启动能量、流式 token 脉冲、错误红色闪断、思考聚合、播报波形、音频低/中/高频和节奏响应。
+- 实时通话视觉映射：`ready` 缓慢呼吸且核心稳定；`connecting` 轨道和粒子向内收束；`listening` 跟随本地麦克风音量形成波纹；`thinking` 粒子聚合且亮度内收；`speaking` 从核心持续向外扩散；`muted` 使用琥珀色弱提示；`connection_error` 先触发红色短闪，随后保持低强度红色可重试状态。
 - 当前麦克风采样会从 `AnalyserNode` 同时读取 RMS 音量和频谱分段，低频影响粒子大小与核心亮度，中频影响轨道速度，高频和节奏影响波形与细碎脉冲。
 - 当前 `ParticleCore` 默认以更大的近景弦核显示，支持鼠标拖拽旋转和滚轮缩放；粒子基础分布采用多轴包裹壳，而不是单一圆饼盘，避免视角切换时压成一条线。左侧会话抽屉或右侧设置、记忆、工作台等实际面板打开时会传入边缘面板状态，让弦核产生轻微 3D 视角和重心偏转。右上角图标 rail 不参与弦核偏转；底部输入打开只触发一次短促但可感知的 composer intrusion impulse，用输入框上沿作为波源向上推出粒子深度扰动、核心上推、相机轻微推进、halo 放大和空间波前，不能把 hover/click 高频状态持续映射为视角偏移或旋转，也不能额外生成偏心 3D 圆环。流式 token 脉冲必须限速并保持轻量，只提供短促亮度/波纹反馈，不得显著加速整体旋转。
 

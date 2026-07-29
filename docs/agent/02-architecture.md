@@ -10,7 +10,7 @@
 - 本地存储保存会话历史、设置、长期记忆索引和必要审计日志。
 - 系统状态遥测由 main process 聚合读取 CPU、内存、磁盘和 GPU 可用状态，通过 preload 的只读接口提供给 renderer，不暴露本地路径或系统控制能力。
 - AI Runtime 负责模型供应商适配、流式回复、错误归一化和上下文组装。
-- Voice Runtime 负责语音输入、录音状态、ASR、TTS 和播放生命周期。
+- Voice Runtime 负责实时语音 WebRTC 生命周期、语音输入、录音状态、ASR、TTS 和播放生命周期。
 - 长期记忆由 main process 持久化并在 AI Runtime 组装上下文时注入，renderer 只通过 preload 进行用户可见管理。
 - 产品化层由 main process 负责脱敏运行日志、崩溃恢复和运行信息 IPC，renderer 负责错误边界和用户可见恢复入口。
 
@@ -39,6 +39,7 @@
 - Renderer 禁止直接访问 Node API、文件系统、数据库、系统密钥或环境变量。
 - Preload 只暴露明确的 typed API，不暴露任意命令执行或通用文件读写。
 - Main process 是持久化写入、密钥读取、模型请求代理和本地服务编排的边界。
+- 实时语音 SDP 由 renderer 生成，经 typed preload 交给 main process；main process 使用本机保存的 codex-LB 密钥调用私有通话创建路由，只把远端 SDP 返回 renderer，密钥不得进入 renderer。
 - 系统状态采样必须留在 main process，renderer 只消费结构化快照，不直接调用系统命令或硬件接口。
 - AI Runtime 不直接渲染 UI；它只返回结构化状态、流式文本、错误和元数据。
 - Voice Runtime 不直接修改聊天历史；语音结果应通过会话服务进入对话流。
@@ -47,15 +48,17 @@
 
 ## 对话状态机
 
-第一版对话与视觉共享以下高层状态：
+实时语音启用时，通话与视觉共享以下高层状态：
 
-- `idle`：待机或没有活动请求。
-- `listening`：用户正在录音或输入语音。
-- `transcribing`：语音正在识别。
-- `thinking`：模型请求已发出，等待或接收流式内容。
-- `speaking`：正在语音播报。
-- `muted`：语音播报关闭。
-- `error`：模型、网络、语音或存储失败。
+- `ready`：等待用户显式开始，麦克风未开启。
+- `connecting`：真实 SDP 协商和 WebRTC 建联正在进行。
+- `listening`：通话已连接，正在接收用户声音。
+- `thinking`：已收到用户语音，模型正在处理。
+- `speaking`：远端回答音频正在播放。
+- `muted`：本地麦克风轨道已静音。
+- `connection_error`：建联或在线连接失败，停留在通话界面并提供重试。
+
+实时语音未启用时，保留文字对话的 `idle`、`transcribing`、`thinking`、`speaking` 和 `error` 等既有状态。
 
 状态变化必须可被 renderer 订阅，视觉系统不得自行推断业务状态。
 

@@ -10,7 +10,7 @@
 - 视觉：Three.js/WebGL + GSAP 或 Framer Motion；粒子核心优先使用 Three.js。
 - 本地后端：Electron main process。
 - 模型：云端大模型 API 优先，通过 AI Runtime 适配；供应商不直接耦合 UI。
-- 语音：ASR/TTS 通过 Voice Runtime 适配，v1 优先云端服务或系统能力。
+- 语音：实时通话使用浏览器原生 WebRTC，由 main process 代理私有 SDP 创建请求；ASR/TTS 继续通过 Voice Runtime 适配，不为实时通话新增第三方前端依赖。
 - 数据库：SQLite 文件；当前通过 `sql.js` 在 main process 中读写本地 SQLite 文件，后续产品化可评估 native SQLite。
 - 测试：Vitest、React Testing Library、后续 Electron smoke tests 和视觉截图检查。
 - 打包：electron-builder，Windows 优先。
