@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, it } from 'vitest'
-import type { AiStreamEvent, AppError, AudioSignal, ChatMessage, ConversationState, CoreMode, LongTermMemory, VisualSignal } from '../../src/shared'
+import type { AiStreamEvent, AppError, AudioSignal, ChatMessage, ConversationState, CoreMode, LongTermMemory, SystemTelemetrySnapshot, VisualSignal } from '../../src/shared'
 
 describe('shared type contracts', () => {
   it('keeps the baseline shared contracts importable from src/shared', () => {
@@ -9,6 +9,8 @@ describe('shared type contracts', () => {
     expectTypeOf<LongTermMemory>().toHaveProperty('enabled').toEqualTypeOf<boolean>()
     expectTypeOf<AudioSignal>().toHaveProperty('rhythm').toEqualTypeOf<number>()
     expectTypeOf<VisualSignal>().toHaveProperty('tokenPulse').toEqualTypeOf<number>()
+    expectTypeOf<SystemTelemetrySnapshot>().toHaveProperty('cpu')
+    expectTypeOf<SystemTelemetrySnapshot>().toHaveProperty('gpu')
     expectTypeOf<AiStreamEvent>().toHaveProperty('type')
     expectTypeOf<AppError>().toHaveProperty('recoverable').toEqualTypeOf<boolean>()
   })

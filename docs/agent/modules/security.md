@@ -19,6 +19,8 @@
 - GPT-Live 的 codex-LB 配置使用独立的 main process 配置文件；preload 同样只返回 `hasApiKey`。实时语音检测草稿只在 main process 临时使用，不写入日志。
 - 模型连接测试可以通过 preload 向 main process 传递当前表单草稿；main process 只临时用于测试，不写入日志或配置文件，除非用户显式保存。
 - 当前运行日志由 main process 写入本机应用数据目录下的日志文件，日志字段会对 API Key、Authorization、token、对话内容、语音样本和本地路径做脱敏。
+- 当前 BrowserWindow 启用 renderer sandbox、`contextIsolation`，并禁用 `nodeIntegration`；renderer 只能通过 preload 暴露的 typed API 访问桌面能力。
+- 当前系统状态遥测只返回聚合级 CPU、内存、磁盘容量和 GPU feature status，不返回本地绝对路径、用户名、主机名、进程列表或窗口标题，也不写入日志。
 
 ## 边界规则
 
@@ -26,6 +28,7 @@
 - 任何系统级操作能力必须先有权限模型和用户确认。
 - 默认不启用持续麦克风监听。
 - 实时语音启用是失败关闭操作：renderer 的检测结果只控制界面交互，main process 在持久化 `enabled: true` 前必须独立复检，不能信任 renderer 状态。
+- 系统状态展示属于只读态势能力，不得扩展为文件访问、进程管理或硬件控制，除非先补齐权限和确认设计。
 
 ## 验证要求
 

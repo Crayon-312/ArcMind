@@ -8,6 +8,7 @@
 - Renderer process 运行 React 应用、聊天界面、设置界面和 Three.js/WebGL 粒子视觉。
 - Preload 只暴露 typed `window.arcMind`，作为 renderer 与 main 的安全桥接。
 - 本地存储保存会话历史、设置、长期记忆索引和必要审计日志。
+- 系统状态遥测由 main process 聚合读取 CPU、内存、磁盘和 GPU 可用状态，通过 preload 的只读接口提供给 renderer，不暴露本地路径或系统控制能力。
 - AI Runtime 负责模型供应商适配、流式回复、错误归一化和上下文组装。
 - Voice Runtime 负责语音输入、录音状态、ASR、TTS 和播放生命周期。
 - 长期记忆由 main process 持久化并在 AI Runtime 组装上下文时注入，renderer 只通过 preload 进行用户可见管理。
@@ -38,6 +39,7 @@
 - Renderer 禁止直接访问 Node API、文件系统、数据库、系统密钥或环境变量。
 - Preload 只暴露明确的 typed API，不暴露任意命令执行或通用文件读写。
 - Main process 是持久化写入、密钥读取、模型请求代理和本地服务编排的边界。
+- 系统状态采样必须留在 main process，renderer 只消费结构化快照，不直接调用系统命令或硬件接口。
 - AI Runtime 不直接渲染 UI；它只返回结构化状态、流式文本、错误和元数据。
 - Voice Runtime 不直接修改聊天历史；语音结果应通过会话服务进入对话流。
 - 视觉系统只消费 renderer 组装出的 `CoreMode` 与 `VisualSignal`，不得直接调用 AI Runtime、Voice Runtime 或存储层。

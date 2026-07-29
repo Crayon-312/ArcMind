@@ -17,6 +17,7 @@ import { ModelConfigStore } from './settings/modelConfigStore'
 import { RealtimeVoiceConfigStore } from './settings/realtimeVoiceConfigStore'
 import { saveRealtimeVoiceConfig } from './settings/realtimeVoiceSettings'
 import { ConversationRepository } from './storage/conversationRepository'
+import { getSystemTelemetrySnapshot } from './system/systemTelemetry'
 import { transcribeOpenAiCompatibleAudio } from './voice/asrRuntime'
 import { probeRealtimeVoiceCapability } from './voice/realtimeVoiceCapability'
 
@@ -41,7 +42,7 @@ function createWindow(): void {
     trafficLightPosition: { x: 14, y: 14 },
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),
-      sandbox: false,
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -118,6 +119,14 @@ app.whenReady().then(async () => {
     arch: process.arch,
     packaged: app.isPackaged
   }))
+  ipcMain.handle('system:get-telemetry-snapshot', async () => {
+    const gpuInfo = await app.getGPUInfo('basic').catch(() => null)
+    return getSystemTelemetrySnapshot({
+      diskPath: app.getPath('home'),
+      gpuInfo,
+      gpuFeatureStatus: app.getGPUFeatureStatus() as unknown as Record<string, string>
+    })
+  })
   ipcMain.handle('settings:get-model-config', async () => {
     return modelConfigStore?.getPublic()
   })
@@ -152,6 +161,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('chat:send-message', async (event, input: SendChatMessageInput) => {
     try {
       validateChatMessages(input.messages)
+      const config = await requireModelConfigStore().get()
+      chatRuntime.validateConfig(config)
+      const memories = await requireConversationRepository().listEnabledMemories()
       await requireConversationRepository().saveConversationMessages(input.conversationId, input.messages)
       const window = BrowserWindow.fromWebContents(event.sender)
       if (!window) {
@@ -160,8 +172,8 @@ app.whenReady().then(async () => {
       chatRuntime.send({
         requestId: input.requestId,
         messages: input.messages,
-        memories: await requireConversationRepository().listEnabledMemories(),
-        config: await requireModelConfigStore().get(),
+        memories,
+        config,
         window,
         conversationId: input.conversationId,
         onDone: async (message) => {

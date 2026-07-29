@@ -14,6 +14,8 @@ Main process 负责桌面窗口、IPC handlers、应用生命周期、模型请�
 - 当前已提供模型配置 IPC、聊天发送/取消 IPC，并由 main process 负责读取 API Key 与发起模型请求。
 - “测试连接”IPC 可接收 renderer 当前设置草稿，由 main process 临时合并后测试，不要求用户先保存配置，也不把测试草稿落盘。
 - 当前提供独立的实时语音配置读取、保存和检测 IPC。检测通过 codex-LB OpenAPI 路由声明和只读 `/v1/usage` 完成，不创建通话。
+- 聊天发送 IPC 必须先校验消息和模型配置，再持久化用户消息并启动流式请求，避免配置错误时写入半完成会话。
+- 当前已提供 `system:get-telemetry-snapshot` 只读 IPC，由 main process 聚合本机 CPU、内存、磁盘和 GPU 可用状态后返回结构化快照。
 
 ## 数据与状态
 
@@ -21,6 +23,8 @@ Main process 负责桌面窗口、IPC handlers、应用生命周期、模型请�
 - 持久化写入必须通过明确 repository 或配置服务。
 - 当前 main process 已提供脱敏运行日志，记录应用启动、窗口就绪、renderer 进程退出、窗口无响应、未捕获异常和退出事件。
 - 当前 renderer 进程异常时 main process 最多自动 reload 一次，避免持续崩溃时无限重启。
+- 当前窗口使用 `contextIsolation`、禁用 `nodeIntegration`，并启用 renderer sandbox；preload 只暴露 typed `window.arcMind`。
+- 当前系统状态遥测不持久化、不写入日志，也不把本地磁盘路径返回给 renderer。
 
 ## 边界规则
 

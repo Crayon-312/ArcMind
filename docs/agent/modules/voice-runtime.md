@@ -20,7 +20,7 @@ Voice Runtime 负责录音、ASR 语音识别、TTS 语音合成、播放控制�
 
 - 音频临时文件或 buffer 必须有生命周期和清理策略。
 - TTS 播放必须支持停止和切换静音。
-- 当前录音不落盘，`MediaRecorder` 停止后立即释放媒体轨道，ASR 请求使用内存中的 `ArrayBuffer`。
+- 当前录音不落盘，`MediaRecorder` 停止后立即释放媒体轨道，ASR 请求使用内存中的 `ArrayBuffer`。录音与音量分析复用同一条 `MediaStream`，避免一次点击说话触发两路麦克风采集。
 - 当前 TTS 不生成或保存音频文件；模型回复完成后可自动播报，静音或停止播报会调用 `speechSynthesis.cancel()` 并驱动 `speaking` 视觉状态退出。
 - 实时语音只持久化 `provider`、`enabled`、服务根地址和代理 API Key；瞬时检测状态不持久化。
 

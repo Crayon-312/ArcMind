@@ -16,6 +16,7 @@ import type {
   SendChatMessageResult,
   SetMemoryEnabledInput,
   SpeakTextInput,
+  SystemTelemetrySnapshot,
   TranscribeAudioInput,
   TranscribeAudioResult,
   UpdateMemoryInput
@@ -33,6 +34,9 @@ const api = {
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     }
+  },
+  system: {
+    getTelemetrySnapshot: (): Promise<SystemTelemetrySnapshot> => ipcRenderer.invoke('system:get-telemetry-snapshot')
   },
   settings: {
     getModelConfig: (): Promise<PublicModelConfig> => ipcRenderer.invoke('settings:get-model-config'),

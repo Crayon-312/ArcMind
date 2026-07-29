@@ -50,6 +50,30 @@ describe('ConversationRepository', () => {
     await second.close()
   })
 
+  it('serializes overlapping persistence writes so the latest state wins', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'arcmind-history-'))
+    const first = new ConversationRepository(tempDir)
+    await first.initialize()
+    const conversation = await first.createConversation('Concurrent')
+
+    await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        first.saveConversationMessages(conversation.id, [
+          message(`m${index}`, 'user', `message ${index}`),
+          message(`a${index}`, 'assistant', `reply ${index}`)
+        ])
+      )
+    )
+    await first.close()
+
+    const second = new ConversationRepository(tempDir)
+    await second.initialize()
+    const restored = await second.getConversation(conversation.id)
+
+    expect(restored?.messages.map((item) => item.content)).toEqual(['message 7', 'reply 7'])
+    await second.close()
+  })
+
   it('creates, edits, disables, deletes and persists long-term memories', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'arcmind-history-'))
     const first = new ConversationRepository(tempDir)
