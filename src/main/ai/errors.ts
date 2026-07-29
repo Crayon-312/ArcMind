@@ -30,6 +30,11 @@ export function normalizeAiError(error: unknown): AppError {
   return appError('unknown', '模型请求失败。', true)
 }
 
+export function toIpcError(error: unknown): Error {
+  const normalized = normalizeAiError(error)
+  return new Error(normalized.message)
+}
+
 export function isAppError(error: unknown): error is AppError {
   return (
     typeof error === 'object' &&

@@ -24,6 +24,7 @@ import { coreModeLabel, statusText } from './statusText'
 import { SystemTelemetryProjection } from './SystemTelemetryProjection'
 import { revealNextChunk, TYPEWRITER_FRAME_MS } from './typewriter'
 import { createOpenWorkbenchDocument, parseWorkbenchContent, stripWorkbenchMarkup, type WorkbenchDocument } from './workbench'
+import { userFacingErrorMessage } from './userFacingErrorMessage'
 
 const seedMessages: ChatMessage[] = [
   {
@@ -242,7 +243,7 @@ export function App(): JSX.Element {
         setActiveRequestId(null)
         setWorkbenchOpen(false)
         setWorkbenchDocument(parseWorkbenchContent(''))
-        setError(errorMessage(unknownError))
+        setError(userFacingErrorMessage(unknownError))
         setErrorPulse((value) => value + 1)
       })
   }
@@ -624,7 +625,7 @@ export function App(): JSX.Element {
       setRealtimeVoiceCapability({
         ok: false,
         status: 'network_failed',
-        message: errorMessage(unknownError),
+        message: userFacingErrorMessage(unknownError),
         checkedAt: new Date().toISOString()
       })
       setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
@@ -652,7 +653,7 @@ export function App(): JSX.Element {
       setRealtimeVoiceDraft(next)
       setError(null)
     } catch (unknownError) {
-      setError(errorMessage(unknownError))
+      setError(userFacingErrorMessage(unknownError))
       setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
     }
   }
@@ -729,7 +730,7 @@ export function App(): JSX.Element {
       setError(null)
       await refreshMemories()
     } catch (unknownError) {
-      setError(errorMessage(unknownError) || '记忆保存失败。')
+      setError(userFacingErrorMessage(unknownError) || '记忆保存失败。')
     }
   }
 
@@ -748,7 +749,7 @@ export function App(): JSX.Element {
       await window.arcMind?.storage.setMemoryEnabled({ id: memory.id, enabled: !memory.enabled })
       await refreshMemories()
     } catch (unknownError) {
-      setError(errorMessage(unknownError) || '记忆状态更新失败。')
+      setError(userFacingErrorMessage(unknownError) || '记忆状态更新失败。')
     }
   }
 
@@ -760,7 +761,7 @@ export function App(): JSX.Element {
       }
       await refreshMemories()
     } catch (unknownError) {
-      setError(errorMessage(unknownError) || '记忆删除失败。')
+      setError(userFacingErrorMessage(unknownError) || '记忆删除失败。')
     }
   }
 
@@ -831,7 +832,7 @@ export function App(): JSX.Element {
       stream?.getTracks().forEach((track) => track.stop())
       microphone.stop()
       setRecordingStatus('idle')
-      setError(errorMessage(unknownError) || '麦克风不可用。')
+      setError(userFacingErrorMessage(unknownError) || '麦克风不可用。')
       setErrorPulse((value) => value + 1)
     }
   }
@@ -853,7 +854,7 @@ export function App(): JSX.Element {
       setRecordingStatus('idle')
     } catch (unknownError) {
       setRecordingStatus('idle')
-      setError(errorMessage(unknownError) || '语音识别失败。')
+      setError(userFacingErrorMessage(unknownError) || '语音识别失败。')
       setErrorPulse((value) => value + 1)
     }
   }
@@ -1312,13 +1313,6 @@ export function App(): JSX.Element {
       </section>
     </main>
   )
-}
-
-function errorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-    return error.message
-  }
-  return '请求失败，请检查模型配置。'
 }
 
 function withoutBlankApiKey(input: Partial<ModelConfig>): Partial<ModelConfig> {

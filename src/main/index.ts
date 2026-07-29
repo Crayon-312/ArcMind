@@ -11,7 +11,7 @@ import type {
   UpdateMemoryInput
 } from '../shared'
 import { ChatRuntime, validateChatMessages } from './ai/chatRuntime'
-import { normalizeAiError } from './ai/errors'
+import { normalizeAiError, toIpcError } from './ai/errors'
 import { AppLogger } from './logging/appLogger'
 import { ModelConfigStore } from './settings/modelConfigStore'
 import { RealtimeVoiceConfigStore } from './settings/realtimeVoiceConfigStore'
@@ -150,7 +150,7 @@ app.whenReady().then(async () => {
     try {
       return await saveRealtimeVoiceConfig(requireRealtimeVoiceConfigStore(), input)
     } catch (error) {
-      return Promise.reject(normalizeAiError(error))
+      throw toIpcError(error)
     }
   })
   ipcMain.handle('settings:test-realtime-voice-config', async (_, input?: Partial<RealtimeVoiceConfig>) => {
@@ -183,7 +183,7 @@ app.whenReady().then(async () => {
       })
       return { requestId: input.requestId }
     } catch (error) {
-      return Promise.reject(normalizeAiError(error))
+      throw toIpcError(error)
     }
   })
   ipcMain.handle('chat:cancel-message', (_, requestId: string) => {
@@ -229,7 +229,7 @@ app.whenReady().then(async () => {
     try {
       return await transcribeOpenAiCompatibleAudio(await requireModelConfigStore().get(), input)
     } catch (error) {
-      return Promise.reject(normalizeAiError(error))
+      throw toIpcError(error)
     }
   })
 

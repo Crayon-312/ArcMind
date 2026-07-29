@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -79,6 +79,29 @@ describe('RealtimeVoiceConfigStore', () => {
       baseUrl: 'https://saved.example.com',
       apiKey: 'saved-voice-credential',
       enabled: false
+    })
+  })
+
+  it('reads a UTF-8 BOM configuration and normalizes an API base URL ending in /v1', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'arcmind-realtime-voice-'))
+    await writeFile(
+      join(tempDir, 'realtime-voice-config.json'),
+      `\uFEFF${JSON.stringify({
+        realtimeVoiceConfig: {
+          provider: 'codex-lb-live',
+          enabled: true,
+          baseUrl: 'https://voice.example.com/v1/',
+          apiKey: 'placeholder-voice-credential'
+        }
+      })}`,
+      'utf8'
+    )
+    const store = new RealtimeVoiceConfigStore(tempDir)
+
+    await expect(store.get()).resolves.toMatchObject({
+      enabled: true,
+      baseUrl: 'https://voice.example.com',
+      apiKey: 'placeholder-voice-credential'
     })
   })
 

@@ -49,7 +49,7 @@ export class RealtimeVoiceConfigStore {
   private async read(): Promise<StoredRealtimeVoiceConfig> {
     try {
       const raw = await readFile(this.filePath, 'utf8')
-      const parsed = JSON.parse(raw) as StoredRealtimeVoiceConfig
+      const parsed = JSON.parse(raw.replace(/^\uFEFF/, '')) as StoredRealtimeVoiceConfig
       return parsed && typeof parsed === 'object' ? parsed : {}
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
@@ -61,10 +61,11 @@ export class RealtimeVoiceConfigStore {
 }
 
 export function normalizeRealtimeVoiceConfig(input: RealtimeVoiceConfig): RealtimeVoiceConfig {
+  const baseUrl = input.baseUrl.trim().replace(/\/+$/, '').replace(/\/v1$/i, '')
   return {
     provider: 'codex-lb-live',
     enabled: Boolean(input.enabled),
-    baseUrl: input.baseUrl.trim().replace(/\/+$/, ''),
+    baseUrl,
     apiKey: input.apiKey.trim()
   }
 }

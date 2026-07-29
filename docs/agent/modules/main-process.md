@@ -14,6 +14,7 @@ Main process 负责桌面窗口、IPC handlers、应用生命周期、模型请�
 - 当前已提供模型配置 IPC、聊天发送/取消 IPC，并由 main process 负责读取 API Key 与发起模型请求。
 - “测试连接”IPC 可接收 renderer 当前设置草稿，由 main process 临时合并后测试，不要求用户先保存配置，也不把测试草稿落盘。
 - 当前提供独立的实时语音配置读取、保存和检测 IPC。检测通过 codex-LB OpenAPI 路由声明和只读 `/v1/usage` 完成，不创建通话。
+- IPC handler 向 renderer 拒绝预期业务错误时必须抛出可序列化的 `Error`，不能直接拒绝普通对象；renderer 统一去除 Electron 包装前缀，避免用户只看到 `[object Object]`。
 - 聊天发送 IPC 必须先校验消息和模型配置，再持久化用户消息并启动流式请求，避免配置错误时写入半完成会话。
 - 当前已提供 `system:get-telemetry-snapshot` 只读 IPC，由 main process 聚合本机 CPU、内存、磁盘和 GPU 可用状态后返回结构化快照。
 
