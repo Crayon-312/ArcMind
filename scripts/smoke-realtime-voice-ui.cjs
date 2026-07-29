@@ -78,11 +78,51 @@ async function main() {
   assert(checks.panelFitsViewport && checks.startVisible, 'Realtime voice controls are not visibly usable.')
   assert(checks.callBridgePresent, 'Realtime voice call bridge is missing.')
 
+  await window.webContents.executeJavaScript(`
+    (() => {
+      const audioContext = new AudioContext();
+      const silentStream = audioContext.createMediaStreamDestination().stream;
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        configurable: true,
+        value: async () => silentStream
+      });
+      document.querySelector('.voice-primary-button')?.click();
+    })()
+  `)
+  await waitFor(window, () => `
+    Boolean(
+      document.querySelector('.voice-call-panel.is-connection_error') &&
+      document.querySelector('.voice-diagnostic') &&
+      document.querySelector('.voice-diagnostic')?.textContent?.includes('realtime_call_unavailable')
+    )
+  `)
+  const failureChecks = await window.webContents.executeJavaScript(`
+    (() => {
+      const diagnostic = document.querySelector('.voice-diagnostic');
+      const diagnosticRect = diagnostic?.getBoundingClientRect();
+      return {
+        stageVisible: diagnostic?.textContent?.includes('codex-LB 通话创建') ?? false,
+        chineseErrorVisible: diagnostic?.textContent?.includes('上游实时语音不可用') ?? false,
+        internalCodeVisible: diagnostic?.textContent?.includes('realtime_unavailable') ?? false,
+        upstreamCodeVisible: diagnostic?.textContent?.includes('realtime_call_unavailable') ?? false,
+        recoveryVisible: document.querySelector('.voice-recovery-actions')?.textContent?.includes('重试') ?? false,
+        diagnosticFitsViewport: diagnosticRect
+          ? diagnosticRect.left >= 0 && diagnosticRect.right <= innerWidth && diagnosticRect.bottom <= innerHeight
+          : false
+      };
+    })()
+  `)
+  assert(failureChecks.stageVisible, 'Realtime failure stage is not visible.')
+  assert(failureChecks.chineseErrorVisible && failureChecks.internalCodeVisible, 'Realtime error code is incomplete.')
+  assert(failureChecks.upstreamCodeVisible, 'Safe upstream error code is not visible.')
+  assert(failureChecks.recoveryVisible, 'Realtime recovery controls are missing.')
+  assert(failureChecks.diagnosticFitsViewport, 'Realtime diagnostic panel does not fit the viewport.')
+
   if (process.env.ARCMIND_SMOKE_SCREENSHOT) {
     writeFileSync(process.env.ARCMIND_SMOKE_SCREENSHOT, (await window.capturePage()).toPNG())
   }
 
-  console.log(JSON.stringify({ ok: true, checks }, null, 2))
+  console.log(JSON.stringify({ ok: true, checks, failureChecks }, null, 2))
   window.destroy()
   app.quit()
 }
@@ -128,9 +168,19 @@ function registerIpc() {
   ipcMain.handle('storage:get-most-recent-conversation', () => null)
   ipcMain.handle('storage:list-conversations', () => [])
   ipcMain.handle('storage:list-memories', () => [])
-  ipcMain.handle('voice:create-realtime-call', () => {
-    throw new Error('Smoke test must not start the microphone or create a call.')
-  })
+  ipcMain.handle('voice:create-realtime-call', () => ({
+    ok: false,
+    error: {
+      code: 'realtime_unavailable',
+      message: 'codex-LB 已收到请求，但上游 ChatGPT 账户未能创建 Live Voice 通话。',
+      recoverable: true,
+      details: {
+        stage: 'call_creation',
+        httpStatus: 403,
+        upstreamCode: 'realtime_call_unavailable'
+      }
+    }
+  }))
 }
 
 async function waitFor(window, expression) {

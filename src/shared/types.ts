@@ -39,10 +39,15 @@ export type AppErrorCode =
   | 'validation_failed'
   | 'network_failed'
   | 'auth_failed'
+  | 'permission_denied'
   | 'rate_limited'
   | 'timeout'
   | 'cancelled'
   | 'microphone_unavailable'
+  | 'realtime_unavailable'
+  | 'upstream_request_rejected'
+  | 'protocol_failed'
+  | 'connection_failed'
   | 'storage_failed'
 
 export interface AppError {
@@ -228,9 +233,15 @@ export interface CreateRealtimeVoiceCallInput {
   sdp: string
 }
 
-export interface CreateRealtimeVoiceCallResult {
-  sdp: string
-}
+export type CreateRealtimeVoiceCallResult =
+  | {
+      ok: true
+      sdp: string
+    }
+  | {
+      ok: false
+      error: AppError
+    }
 
 export interface SpeakTextInput {
   text: string

@@ -164,9 +164,24 @@ app.whenReady().then(async () => {
   ipcMain.handle('voice:create-realtime-call', async (_, input: CreateRealtimeVoiceCallInput) => {
     try {
       const config = await requireRealtimeVoiceConfigStore().get()
-      return await createRealtimeVoiceCall(config, input)
+      const result = await createRealtimeVoiceCall(config, input)
+      logger?.info('voice.realtime-call.created')
+      return result
     } catch (error) {
-      throw toIpcError(error)
+      const normalized = normalizeAiError(error)
+      logger?.warn('voice.realtime-call.failed', undefined, {
+        code: normalized.code,
+        stage: typeof normalized.details?.stage === 'string' ? normalized.details.stage : 'unknown',
+        httpStatus:
+          typeof normalized.details?.httpStatus === 'number'
+            ? normalized.details.httpStatus
+            : undefined,
+        upstreamCode:
+          typeof normalized.details?.upstreamCode === 'string'
+            ? normalized.details.upstreamCode
+            : undefined
+      })
+      return { ok: false, error: normalized }
     }
   })
   ipcMain.handle('chat:send-message', async (event, input: SendChatMessageInput) => {

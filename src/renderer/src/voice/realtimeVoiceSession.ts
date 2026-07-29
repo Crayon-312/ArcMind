@@ -1,5 +1,10 @@
 import type { ArcMindApi } from '../../../preload'
-import type { RealtimeVoiceSessionStatus } from '../../../shared'
+import type { AppError, RealtimeVoiceSessionStatus } from '../../../shared'
+import {
+  normalizeRealtimeVoiceError,
+  realtimeVoiceConnectionError,
+  type RealtimeVoiceFailureStage
+} from './realtimeVoiceDiagnostics'
 
 export interface RealtimeVoiceSession {
   close: () => void
@@ -8,6 +13,7 @@ export interface RealtimeVoiceSession {
 
 export interface RealtimeVoiceSessionOptions {
   bridge: ArcMindApi
+  onFailure: (error: AppError) => void
   onLocalStream: (stream: MediaStream) => Promise<void> | void
   onStateChange: (status: RealtimeVoiceSessionStatus) => void
   signal?: AbortSignal
@@ -18,14 +24,9 @@ export async function startRealtimeVoiceSession(
 ): Promise<RealtimeVoiceSession> {
   const peer = new RTCPeerConnection()
   const audio = document.createElement('audio')
-  const localStream = await navigator.mediaDevices.getUserMedia({
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true
-    }
-  })
+  let localStream: MediaStream | null = null
   let closed = false
+  let failureStage: RealtimeVoiceFailureStage = 'microphone_access'
   let microphoneMuted = false
   let semanticState: RealtimeVoiceSessionStatus = 'connecting'
   let visibleState: RealtimeVoiceSessionStatus = 'connecting'
@@ -102,7 +103,7 @@ export async function startRealtimeVoiceSession(
     audio.pause()
     audio.srcObject = null
     peer.close()
-    localStream.getTracks().forEach((track) => track.stop())
+    localStream?.getTracks().forEach((track) => track.stop())
   }
 
   try {
@@ -110,12 +111,23 @@ export async function startRealtimeVoiceSession(
       throw new DOMException('Realtime voice connection cancelled.', 'AbortError')
     }
     options.signal?.addEventListener('abort', close, { once: true })
+    const activeLocalStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    })
+    localStream = activeLocalStream
     audio.autoplay = true
     audio.setAttribute('aria-hidden', 'true')
     peer.ontrack = (event) => {
       const remoteStream = event.streams[0] ?? new MediaStream([event.track])
       audio.srcObject = remoteStream
-      void audio.play()
+      void audio.play().catch((error) => {
+        options.onFailure(normalizeRealtimeVoiceError(error, 'remote_audio'))
+        emit('connection_error')
+      })
       startRemoteAnalysis(remoteStream)
     }
     peer.onconnectionstatechange = () => {
@@ -128,22 +140,49 @@ export async function startRealtimeVoiceSession(
         peer.connectionState === 'failed' ||
         peer.connectionState === 'disconnected'
       ) {
+        options.onFailure(
+          realtimeVoiceConnectionError(
+            'peer_connection',
+            `WebRTC 连接进入${peer.connectionState === 'failed' ? '失败' : '断开'}状态。`,
+            {
+              connectionState: peer.connectionState,
+              iceConnectionState: peer.iceConnectionState
+            }
+          )
+        )
         emit('connection_error')
       }
     }
 
-    localStream.getAudioTracks().forEach((track) => peer.addTrack(track, localStream))
-    await options.onLocalStream(localStream)
+    activeLocalStream
+      .getAudioTracks()
+      .forEach((track) => peer.addTrack(track, activeLocalStream))
+    await options.onLocalStream(activeLocalStream)
 
     const dataChannel = peer.createDataChannel('oai-events')
     dataChannel.addEventListener('message', (event) => {
+      const serverError = realtimeVoiceErrorFromServerEvent(event.data)
+      if (serverError) {
+        options.onFailure(serverError)
+        emit('connection_error')
+        return
+      }
       const next = realtimeVoiceStatusFromServerEvent(event.data)
       if (next) {
         emitSemantic(next)
       }
     })
-    dataChannel.addEventListener('error', () => emit('connection_error'))
+    dataChannel.addEventListener('error', () => {
+      options.onFailure(
+        realtimeVoiceConnectionError(
+          'data_channel',
+          '实时语音控制数据通道发生错误，模型事件无法继续传输。'
+        )
+      )
+      emit('connection_error')
+    })
 
+    failureStage = 'offer_creation'
     const offer = await peer.createOffer()
     await peer.setLocalDescription(offer)
     const localSdp = peer.localDescription?.sdp
@@ -151,17 +190,22 @@ export async function startRealtimeVoiceSession(
       throw new Error('无法生成实时通话协商内容。')
     }
 
+    failureStage = 'call_creation'
     const answer = await options.bridge.voice.createRealtimeCall({ sdp: localSdp })
+    if (!answer.ok) {
+      throw answer.error
+    }
     if (options.signal?.aborted) {
       throw new DOMException('Realtime voice connection cancelled.', 'AbortError')
     }
+    failureStage = 'answer_application'
     await peer.setRemoteDescription({ type: 'answer', sdp: answer.sdp })
 
     return {
       close,
       setMicrophoneMuted: (muted: boolean) => {
         microphoneMuted = muted
-        localStream.getAudioTracks().forEach((track) => {
+        activeLocalStream.getAudioTracks().forEach((track) => {
           track.enabled = !muted
         })
         emit(muted ? 'muted' : semanticState)
@@ -169,7 +213,7 @@ export async function startRealtimeVoiceSession(
     }
   } catch (error) {
     close()
-    throw error
+    throw normalizeRealtimeVoiceError(error, failureStage)
   }
 }
 
@@ -222,4 +266,46 @@ export function realtimeVoiceStatusFromServerEvent(
   }
 
   return null
+}
+
+export function realtimeVoiceErrorFromServerEvent(raw: unknown): AppError | null {
+  if (typeof raw !== 'string') {
+    return null
+  }
+
+  try {
+    const event = JSON.parse(raw) as {
+      type?: unknown
+      error?: {
+        code?: unknown
+        type?: unknown
+      }
+    }
+    if (event.type !== 'error') {
+      return null
+    }
+
+    const upstreamCode = boundedServerToken(event.error?.code)
+    const upstreamType = boundedServerToken(event.error?.type)
+    return realtimeVoiceConnectionError(
+      'data_channel',
+      '实时语音服务通过控制数据通道返回错误。',
+      {
+        ...(upstreamCode ? { upstreamCode } : {}),
+        ...(upstreamType ? { upstreamType } : {})
+      }
+    )
+  } catch {
+    return null
+  }
+}
+
+function boundedServerToken(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+  const token = value.trim()
+  return token.length > 0 && token.length <= 96 && /^[a-zA-Z0-9_./+-]+$/.test(token)
+    ? token
+    : undefined
 }

@@ -2,6 +2,7 @@ import { Brain, Check, ChevronDown, FileText, Mic, MicOff, Pencil, PhoneCall, Ph
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type {
   AiStreamEvent,
+  AppError,
   ChatMessage,
   ConversationState,
   ConversationSummary,
@@ -20,6 +21,11 @@ import { useMicrophoneLevel } from '../audio/useMicrophoneLevel'
 import { ParticleCore } from '../visual/ParticleCore'
 import { resolveVisualSignal } from '../visual/signal'
 import { canUseSpeechSynthesis, createUtterance, shouldAutoSpeak } from '../voice/speech'
+import {
+  normalizeRealtimeVoiceError,
+  realtimeVoiceDiagnosticFromError,
+  type RealtimeVoiceFailureStage
+} from '../voice/realtimeVoiceDiagnostics'
 import { startRealtimeVoiceSession, type RealtimeVoiceSession } from '../voice/realtimeVoiceSession'
 import { desktopBridgeUnavailableMessage, hasModelSettingsBridge } from './runtimeBridge'
 import { coreModeLabel, statusText } from './statusText'
@@ -82,6 +88,7 @@ export function App(): JSX.Element {
   const [realtimeVoiceSettingsLoaded, setRealtimeVoiceSettingsLoaded] = useState(false)
   const [realtimeVoiceSessionStatus, setRealtimeVoiceSessionStatus] =
     useState<RealtimeVoiceSessionStatus>('ready')
+  const [realtimeVoiceError, setRealtimeVoiceError] = useState<AppError | null>(null)
   const [realtimeVoiceMicrophoneMuted, setRealtimeVoiceMicrophoneMuted] = useState(false)
   const [memoryOpen, setMemoryOpen] = useState(false)
   const [memories, setMemories] = useState<LongTermMemory[]>([])
@@ -215,6 +222,10 @@ export function App(): JSX.Element {
     realtimeVoiceSessionStatus === 'thinking' ||
     realtimeVoiceSessionStatus === 'speaking' ||
     realtimeVoiceSessionStatus === 'muted'
+  const realtimeVoiceDiagnostic = useMemo(
+    () => (realtimeVoiceError ? realtimeVoiceDiagnosticFromError(realtimeVoiceError) : null),
+    [realtimeVoiceError]
+  )
 
   const submit = (): void => {
     const value = draft.trim()
@@ -620,10 +631,12 @@ export function App(): JSX.Element {
         setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
         if (config.enabled) {
           setRealtimeVoiceSessionStatus('connection_error')
+          setRealtimeVoiceError(realtimeVoiceErrorFromCapability(capability))
           setErrorPulse((value) => value + 1)
         }
       } else if (config.enabled) {
         setRealtimeVoiceSessionStatus('ready')
+        setRealtimeVoiceError(null)
       }
 
       if (config.enabled && (capability.status === 'unsupported' || capability.status === 'auth_failed')) {
@@ -632,15 +645,19 @@ export function App(): JSX.Element {
         setRealtimeVoiceDraft(disabled)
         setRealtimeVoiceSessionStatus('ready')
       }
-    } catch {
-      setRealtimeVoiceCapability({
+    } catch (unknownError) {
+      const failedCapability: RealtimeVoiceCapabilityResult = {
         ok: false,
         status: 'network_failed',
         message: '实时语音自动检测失败，请检查 codex-LB 服务。',
         checkedAt: new Date().toISOString()
-      })
+      }
+      setRealtimeVoiceCapability(failedCapability)
       setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
       setRealtimeVoiceSessionStatus('connection_error')
+      setRealtimeVoiceError(
+        normalizeRealtimeVoiceError(unknownError, 'capability_check')
+      )
       setErrorPulse((value) => value + 1)
     } finally {
       setTestingRealtimeVoice(false)
@@ -699,6 +716,7 @@ export function App(): JSX.Element {
       setRealtimeVoiceConfig(next)
       setRealtimeVoiceDraft(next)
       setRealtimeVoiceSessionStatus('ready')
+      setRealtimeVoiceError(null)
       setRealtimeVoiceMicrophoneMuted(false)
       if (!next.enabled) {
         stopRealtimeVoiceCall()
@@ -845,8 +863,15 @@ export function App(): JSX.Element {
       !realtimeVoiceConfig?.enabled ||
       typeof bridge?.voice?.createRealtimeCall !== 'function'
     ) {
+      const runtimeError: AppError = {
+        code: 'validation_failed',
+        message: '实时通话运行时不可用，请从 ArcMind 桌面应用启动。',
+        recoverable: true,
+        details: { stage: 'configuration' }
+      }
       setRealtimeVoiceSessionStatus('connection_error')
-      setError('实时通话运行时不可用，请从 ArcMind 桌面应用启动。')
+      setRealtimeVoiceError(runtimeError)
+      setError(runtimeError.message)
       setErrorPulse((value) => value + 1)
       return
     }
@@ -860,6 +885,7 @@ export function App(): JSX.Element {
     realtimeVoiceSessionRef.current = null
     microphone.stop()
     setRealtimeVoiceMicrophoneMuted(false)
+    setRealtimeVoiceError(null)
     setError(null)
 
     try {
@@ -867,15 +893,15 @@ export function App(): JSX.Element {
       const capability = await bridge.settings.testRealtimeVoiceConfig()
       setRealtimeVoiceCapability(capability)
       if (!capability.ok) {
-        throw new Error(capability.message)
+        throw realtimeVoiceErrorFromCapability(capability)
       }
     } catch (unknownError) {
       if (realtimeVoiceConnectGenerationRef.current !== generation) {
         return
       }
-      setRealtimeVoiceSessionStatus('connection_error')
-      setError(userFacingErrorMessage(unknownError) || '实时语音能力检测失败。')
-      setErrorPulse((value) => value + 1)
+      showRealtimeVoiceFailure(
+        normalizeRealtimeVoiceError(unknownError, 'capability_check')
+      )
       return
     } finally {
       setTestingRealtimeVoice(false)
@@ -890,16 +916,13 @@ export function App(): JSX.Element {
       const session = await startRealtimeVoiceSession({
         bridge,
         signal: connectAbort.signal,
+        onFailure: showRealtimeVoiceFailure,
         onLocalStream: (stream) => microphone.start(stream),
         onStateChange: (status) => {
           if (realtimeVoiceConnectGenerationRef.current !== generation) {
             return
           }
           setRealtimeVoiceSessionStatus(status)
-          if (status === 'connection_error') {
-            setError('实时通话连接已中断，请重试。')
-            setErrorPulse((value) => value + 1)
-          }
         }
       })
 
@@ -914,10 +937,21 @@ export function App(): JSX.Element {
         return
       }
       microphone.stop()
-      setRealtimeVoiceSessionStatus('connection_error')
-      setError(userFacingErrorMessage(unknownError) || '实时通话连接失败。')
-      setErrorPulse((value) => value + 1)
+      showRealtimeVoiceFailure(
+        normalizeRealtimeVoiceError(unknownError, 'peer_connection')
+      )
     }
+  }
+
+  const showRealtimeVoiceFailure = (
+    voiceError: AppError,
+    fallbackStage: RealtimeVoiceFailureStage = 'peer_connection'
+  ): void => {
+    const normalized = normalizeRealtimeVoiceError(voiceError, fallbackStage)
+    setRealtimeVoiceSessionStatus('connection_error')
+    setRealtimeVoiceError(normalized)
+    setError(normalized.message)
+    setErrorPulse((value) => value + 1)
   }
 
   const stopRealtimeVoiceCall = (): void => {
@@ -929,6 +963,7 @@ export function App(): JSX.Element {
     microphone.stop()
     setRealtimeVoiceMicrophoneMuted(false)
     setRealtimeVoiceSessionStatus('ready')
+    setRealtimeVoiceError(null)
     setError(null)
   }
 
@@ -1217,22 +1252,52 @@ export function App(): JSX.Element {
               ) : null}
 
               {realtimeVoiceSessionStatus === 'connection_error' ? (
-                <div className="voice-recovery-actions">
-                  <button type="button" onClick={() => void startRealtimeVoiceCall()}>
-                    <RotateCcw size={16} />
-                    重试
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSettingsOpen(true)
-                      setMemoryOpen(false)
-                      setWorkbenchOpen(false)
-                    }}
-                  >
-                    <Settings size={16} />
-                    设置
-                  </button>
+                <div className="voice-failure">
+                  {realtimeVoiceDiagnostic ? (
+                    <section className="voice-diagnostic" aria-label="实时语音失败详情">
+                      <div className="voice-diagnostic-row">
+                        <span>失败阶段</span>
+                        <strong>{realtimeVoiceDiagnostic.stageLabel}</strong>
+                      </div>
+                      <div className="voice-diagnostic-row">
+                        <span>错误码</span>
+                        <code>
+                          {realtimeVoiceDiagnostic.codeLabel}（{realtimeVoiceDiagnostic.code}）
+                        </code>
+                      </div>
+                      <p>{realtimeVoiceDiagnostic.message}</p>
+                      <p className="voice-diagnostic-action">
+                        建议：{realtimeVoiceDiagnostic.action}
+                      </p>
+                      {realtimeVoiceDiagnostic.technicalDetails.length > 0 ? (
+                        <details>
+                          <summary>查看技术详情</summary>
+                          <ul>
+                            {realtimeVoiceDiagnostic.technicalDetails.map((detail) => (
+                              <li key={detail}>{detail}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      ) : null}
+                    </section>
+                  ) : null}
+                  <div className="voice-recovery-actions">
+                    <button type="button" onClick={() => void startRealtimeVoiceCall()}>
+                      <RotateCcw size={16} />
+                      重试
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettingsOpen(true)
+                        setMemoryOpen(false)
+                        setWorkbenchOpen(false)
+                      }}
+                    >
+                      <Settings size={16} />
+                      设置
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -1580,6 +1645,29 @@ function realtimeVoiceSessionDescription(
     connection_error: '仍停留在实时通话模式，请重试或检查设置。'
   }
   return descriptions[status]
+}
+
+function realtimeVoiceErrorFromCapability(
+  capability: RealtimeVoiceCapabilityResult
+): AppError {
+  const code: AppError['code'] =
+    capability.status === 'auth_failed'
+      ? 'auth_failed'
+      : capability.status === 'network_failed'
+        ? 'network_failed'
+        : capability.status === 'unsupported'
+          ? 'protocol_failed'
+          : 'validation_failed'
+
+  return {
+    code,
+    message: capability.message,
+    recoverable: true,
+    details: {
+      stage: 'capability_check',
+      capabilityStatus: capability.status
+    }
+  }
 }
 
 function withoutBlankApiKey(input: Partial<ModelConfig>): Partial<ModelConfig> {

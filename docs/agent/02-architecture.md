@@ -39,7 +39,7 @@
 - Renderer 禁止直接访问 Node API、文件系统、数据库、系统密钥或环境变量。
 - Preload 只暴露明确的 typed API，不暴露任意命令执行或通用文件读写。
 - Main process 是持久化写入、密钥读取、模型请求代理和本地服务编排的边界。
-- 实时语音 SDP 由 renderer 生成，经 typed preload 交给 main process；main process 使用本机保存的 codex-LB 密钥调用私有通话创建路由，只把远端 SDP 返回 renderer，密钥不得进入 renderer。
+- 实时语音 SDP 由 renderer 生成，经 typed preload 交给 main process；main process 使用本机保存的 codex-LB 密钥，以私有 Codex JSON `{ sdp, session }` 请求形态调用带 `intent=quicksilver&architecture=avas` 的通话创建路由。成功时只把远端 SDP 返回 renderer；失败时只返回结构化、脱敏的错误阶段、错误码和安全诊断元数据，密钥不得进入 renderer。
 - 系统状态采样必须留在 main process，renderer 只消费结构化快照，不直接调用系统命令或硬件接口。
 - AI Runtime 不直接渲染 UI；它只返回结构化状态、流式文本、错误和元数据。
 - Voice Runtime 不直接修改聊天历史；语音结果应通过会话服务进入对话流。

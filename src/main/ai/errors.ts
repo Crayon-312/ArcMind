@@ -1,7 +1,12 @@
 import type { AppError } from '../../shared'
 
-export function appError(code: AppError['code'], message: string, recoverable = true): AppError {
-  return { code, message, recoverable }
+export function appError(
+  code: AppError['code'],
+  message: string,
+  recoverable = true,
+  details?: AppError['details']
+): AppError {
+  return { code, message, recoverable, details }
 }
 
 export function normalizeAiError(error: unknown): AppError {

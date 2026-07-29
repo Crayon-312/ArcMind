@@ -10,7 +10,7 @@
 - 决策：已保存且检测通过的 `codex-lb-live` 配置启用后，首屏不显示文字输入，用户显式点击后才申请麦克风并创建 WebRTC 会话；未启用实时语音时才使用文字聊天。临时连接失败停留在通话界面，提供重试和设置，不自动降级文字。
 - 状态：正式视觉状态为 `ready`、`connecting`、`listening`、`thinking`、`speaking`、`muted`、`connection_error`，分别对应慢呼吸、向内收束、音量波纹、聚合内收、持续外扩、琥珀弱提示、红色短闪后保持可重试。
 - 进程边界：renderer 创建 peer connection、采集麦克风和播放远端音频；main process 使用本机 codex-LB 密钥提交 SDP 并返回远端 SDP。密钥不进入 renderer，音频不经 main process，也不落盘。
-- 证据：OpenAI 官方 WebRTC 指南确认浏览器负责 peer connection、麦克风、远端音频和数据通道，服务端负责携带密钥提交 SDP；codex-LB `docs/live-voice.md` 与测试确认私有 `/backend-api/codex/realtime/calls` 接受 `application/sdp` 并返回 SDP，但不代理 WebRTC 媒体。
+- 证据：OpenAI 官方 WebRTC 指南确认浏览器负责 peer connection、麦克风、远端音频和数据通道，服务端负责携带密钥提交 SDP；官方 Codex 当前 `realtime_call.rs` 确认 `/backend-api` 私有路由使用带 `intent=quicksilver&architecture=avas` 的 JSON `{ sdp, session }` 请求，而公共 `/v1/realtime/calls` 使用 multipart 表单。codex-LB `docs/live-voice.md` 确认它代理前者但不代理 WebRTC 媒体。
 - 边界：codex-LB 私有控制侧事件不是公共稳定契约，因此视觉状态同时使用连接状态、远端真实音量和已知实时事件，未知事件安全忽略；真实账户权益、麦克风权限和远端音频必须在 Electron 中手动验证。
 
 ### 2026-07-29：GPT-Live 实时语音采用 codex-LB 专用配置和失败关闭门禁
