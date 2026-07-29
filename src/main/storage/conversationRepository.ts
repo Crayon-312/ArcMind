@@ -35,6 +35,7 @@ export class ConversationRepository {
   private readonly filePath: string
   private sqlite: SqlJsStatic | null = null
   private db: Database | null = null
+  private persistQueue: Promise<void> = Promise.resolve()
 
   constructor(userDataPath: string, fileName = 'arc-history.sqlite') {
     this.filePath = join(userDataPath, fileName)
@@ -348,10 +349,14 @@ export class ConversationRepository {
   }
 
   private async persist(): Promise<void> {
-    if (!this.db) {
-      return
-    }
-    await writeFile(this.filePath, this.db.export())
+    const write = this.persistQueue.catch(() => undefined).then(async () => {
+      if (!this.db) {
+        return
+      }
+      await writeFile(this.filePath, this.db.export())
+    })
+    this.persistQueue = write
+    await write
   }
 
   private get database(): Database {

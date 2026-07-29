@@ -22,6 +22,7 @@
 - 数据库 schema 和 migration 必须保持可追踪。
 - 当前会话历史使用 SQLite 文件，存放在 Electron `userData` 下，schema 版本记录在 `schema_meta`。
 - 当前长期记忆与会话历史共用 SQLite 文件，使用 `memories` 表保存用户手动写入的文本、启用状态和更新时间。
+- 当前 `sql.js` 持久化写入通过 repository 内部队列串行落盘，避免并发 IPC 写入时旧快照覆盖新快照。
 
 ## 边界规则
 
