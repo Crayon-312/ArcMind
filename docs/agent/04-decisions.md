@@ -4,6 +4,17 @@
 
 ## 已采纳
 
+### 2026-07-29：GPT-Live 实时语音采用 codex-LB 专用配置和失败关闭门禁
+
+- 状态：已采纳。
+- 决策：文字模型继续使用独立的 OpenAI-compatible 配置；GPT-Live 实时语音使用独立的 `codex-lb-live` 配置。设置界面必须声明该能力只兼容 codex-LB 的私有 Codex Live Voice 路由，不能把普通文字接口兼容性视为实时语音兼容性。
+- 检测：main process 读取 codex-LB 的 OpenAPI 文档，确认服务身份和 `POST /backend-api/codex/realtime/calls` 路由，再通过只读的 `GET /v1/usage` 验证代理 API Key 已注册。检测不提交 SDP、不创建通话。
+- 门禁：只有检测状态为 `available` 才允许用户在界面选择启用；保存 `enabled: true` 时 main process 必须再次检测，失败则拒绝持久化。地址或密钥草稿变化后，renderer 立即使旧检测结果失效并关闭草稿中的启用状态。
+- 已验证事实：以上路由和密钥要求来自 2026-07-29 检查的 `Soju06/codex-lb` 当前源码与 `docs/live-voice.md`。codex-LB 明确说明这是已安装 Codex 应用使用的私有兼容面，不是 OpenAI 公共 Realtime API，也不代理 WebRTC 媒体。
+- 官方边界：OpenAI 的 [Realtime and audio](https://developers.openai.com/api/docs/guides/realtime) 文档说明，公共 GA WebRTC 流程使用 `POST /v1/realtime/client_secrets` 和 `/v1/realtime/calls`；这与本项目当前探测的 codex-LB 私有 `/backend-api/codex/realtime/calls` 路径不同。
+- 边界：该检测只能确认 codex-LB 服务、Live Voice 路由和代理密钥；ChatGPT 账户实际语音权益只能在后续建立真实会话时由上游最终确认。当前任务不实现 WebRTC 媒体、WebSocket 控制侧通道或实时通话状态机。
+- 原因：实时语音协议与普通 OpenAI-compatible 文字接口不是同一能力。独立配置可以保留任意文字模型供应商，同时以失败关闭方式防止不支持的中转服务被误启用。
+
 ### 2026-06-30：v1 模型接入采用 OpenAI-compatible HTTP 适配层
 
 - 状态：已采纳。

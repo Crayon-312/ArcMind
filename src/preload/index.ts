@@ -8,6 +8,9 @@ import type {
   ModelConfig,
   ModelConfigTestResult,
   PublicModelConfig,
+  PublicRealtimeVoiceConfig,
+  RealtimeVoiceCapabilityResult,
+  RealtimeVoiceConfig,
   RuntimeInfo,
   SendChatMessageInput,
   SendChatMessageResult,
@@ -34,7 +37,12 @@ const api = {
   settings: {
     getModelConfig: (): Promise<PublicModelConfig> => ipcRenderer.invoke('settings:get-model-config'),
     setModelConfig: (input: Partial<ModelConfig>): Promise<PublicModelConfig> => ipcRenderer.invoke('settings:set-model-config', input),
-    testModelConfig: (input?: Partial<ModelConfig>): Promise<ModelConfigTestResult> => ipcRenderer.invoke('settings:test-model-config', input)
+    testModelConfig: (input?: Partial<ModelConfig>): Promise<ModelConfigTestResult> => ipcRenderer.invoke('settings:test-model-config', input),
+    getRealtimeVoiceConfig: (): Promise<PublicRealtimeVoiceConfig> => ipcRenderer.invoke('settings:get-realtime-voice-config'),
+    setRealtimeVoiceConfig: (input: Partial<RealtimeVoiceConfig>): Promise<PublicRealtimeVoiceConfig> =>
+      ipcRenderer.invoke('settings:set-realtime-voice-config', input),
+    testRealtimeVoiceConfig: (input?: Partial<RealtimeVoiceConfig>): Promise<RealtimeVoiceCapabilityResult> =>
+      ipcRenderer.invoke('settings:test-realtime-voice-config', input)
   },
   storage: {
     listConversations: (): Promise<ConversationSummary[]> => ipcRenderer.invoke('storage:list-conversations'),

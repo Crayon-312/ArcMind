@@ -6,6 +6,15 @@ export type ConversationStatus = 'idle' | 'streaming' | 'cancelled' | 'error'
 
 export type ModelProvider = 'openai-compatible'
 
+export type RealtimeVoiceProvider = 'codex-lb-live'
+
+export type RealtimeVoiceCapabilityStatus =
+  | 'not_configured'
+  | 'available'
+  | 'unsupported'
+  | 'auth_failed'
+  | 'network_failed'
+
 export type AppErrorCode =
   | 'unknown'
   | 'validation_failed'
@@ -117,6 +126,24 @@ export interface ModelConfig {
 
 export type PublicModelConfig = Omit<ModelConfig, 'apiKey'> & {
   hasApiKey: boolean
+}
+
+export interface RealtimeVoiceConfig {
+  provider: RealtimeVoiceProvider
+  enabled: boolean
+  baseUrl: string
+  apiKey: string
+}
+
+export type PublicRealtimeVoiceConfig = Omit<RealtimeVoiceConfig, 'apiKey'> & {
+  hasApiKey: boolean
+}
+
+export interface RealtimeVoiceCapabilityResult {
+  ok: boolean
+  status: RealtimeVoiceCapabilityStatus
+  message: string
+  checkedAt: string
 }
 
 export interface SendChatMessageInput {

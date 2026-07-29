@@ -1,10 +1,12 @@
 const { app, BrowserWindow, ipcMain } = require('electron')
-const { existsSync } = require('node:fs')
+const { existsSync, writeFileSync } = require('node:fs')
 const { join } = require('node:path')
 
 const root = join(__dirname, '..')
 const rendererEntry = join(root, 'out', 'renderer', 'index.html')
 const preloadEntry = join(root, 'out', 'preload', 'index.cjs')
+const smokeWidth = Number(process.env.ARCMIND_SMOKE_WIDTH) || 1280
+const smokeHeight = Number(process.env.ARCMIND_SMOKE_HEIGHT) || 820
 
 async function main() {
   if (!existsSync(rendererEntry)) {
@@ -18,8 +20,8 @@ async function main() {
   registerSmokeIpc()
 
   const window = new BrowserWindow({
-    width: 1280,
-    height: 820,
+    width: smokeWidth,
+    height: smokeHeight,
     show: false,
     backgroundColor: '#030607',
     webPreferences: {
@@ -72,12 +74,23 @@ async function main() {
       settings?.click();
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const settingsPanel = document.querySelector('.settings-panel');
+      const voiceEnable = settingsPanel?.querySelector('.voice-enable-row input');
+      const voiceSectionText = settingsPanel?.querySelector('.settings-section-live')?.textContent ?? '';
+      if (settingsPanel) {
+        settingsPanel.scrollTop = settingsPanel.scrollHeight;
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+      const voiceSaveButton = Array.from(settingsPanel?.querySelectorAll('button') ?? [])
+        .find((button) => button.textContent?.includes('保存语音设置'));
+      const settingsRect = settingsPanel?.getBoundingClientRect();
+      const voiceSaveRect = voiceSaveButton?.getBoundingClientRect();
       const memoryButton = document.querySelector('button[title="记忆"]');
       const canvasPixels = sampleCanvasCenter(canvas);
       return {
         title: document.querySelector('h1')?.textContent ?? null,
         inputPresent: Boolean(input),
         arcMindBridgePresent: Boolean(window.arcMind?.settings?.testModelConfig),
+        realtimeVoiceBridgePresent: Boolean(window.arcMind?.settings?.testRealtimeVoiceConfig),
         coreDragStarted: ${JSON.stringify(coreDragStarted)},
         drawerHiddenBeforeOpen,
         drawerOpenAfterClick,
@@ -85,6 +98,17 @@ async function main() {
         coreModeLabel,
         settingsButtonPresent: Boolean(settings),
         settingsPanelPresent: Boolean(settingsPanel),
+        settingsPanelFitsViewport: settingsPanel
+          ? settingsPanel.getBoundingClientRect().bottom <= window.innerHeight && settingsPanel.scrollHeight >= settingsPanel.clientHeight
+          : false,
+        realtimeVoiceDeclarationPresent: voiceSectionText.includes('仅限 codex-LB') && voiceSectionText.includes('不会创建通话'),
+        realtimeVoiceDisabledBeforeProbe: Boolean(voiceEnable?.disabled),
+        settingsBottomContentReachable: Boolean(
+          settingsRect &&
+            voiceSaveRect &&
+            voiceSaveRect.top >= settingsRect.top &&
+            voiceSaveRect.bottom <= settingsRect.bottom
+        ),
         memoryButtonPresent: Boolean(memoryButton),
         canvasPresent: Boolean(canvas),
         canvasSize: canvas ? { width: canvas.width, height: canvas.height, clientWidth: canvas.clientWidth, clientHeight: canvas.clientHeight } : null,
@@ -114,6 +138,7 @@ async function main() {
   assert(checks.title === 'ArcMind', 'ArcMind title is missing.')
   assert(checks.inputPresent, 'Composer input is missing.')
   assert(checks.arcMindBridgePresent, 'ArcMind preload bridge is missing.')
+  assert(checks.realtimeVoiceBridgePresent, 'Realtime voice preload bridge is missing.')
   assert(checks.coreDragStarted, 'Particle core did not enter drag interaction state.')
   assert(checks.drawerHiddenBeforeOpen, 'Conversation drawer should be hidden before interaction.')
   assert(checks.drawerOpenAfterClick, 'Conversation drawer did not open from the edge tab.')
@@ -121,10 +146,22 @@ async function main() {
   assert(['模型', '会话', '记忆', '令牌'].every((label) => checks.hudLabels.includes(label)), 'HUD labels are not localized.')
   assert(checks.settingsButtonPresent, 'Settings button is missing.')
   assert(checks.settingsPanelPresent, 'Settings panel did not open.')
+  assert(checks.settingsPanelFitsViewport, 'Settings panel overflows the viewport without a scroll boundary.')
+  assert(checks.realtimeVoiceDeclarationPresent, 'Realtime voice codex-LB limitation is missing.')
+  assert(checks.realtimeVoiceDisabledBeforeProbe, 'Realtime voice should be disabled before capability detection.')
+  assert(checks.settingsBottomContentReachable, 'Realtime voice controls cannot be reached by scrolling.')
   assert(checks.memoryButtonPresent, 'Memory button is missing.')
   assert(checks.canvasPresent, 'Particle canvas is missing.')
-  assert(checks.canvasSize?.clientWidth >= 900 && checks.canvasSize?.clientHeight >= 600, 'Particle canvas has an unexpected size.')
+  assert(
+    checks.canvasSize?.clientWidth >= Math.min(900, smokeWidth - 40) &&
+      checks.canvasSize?.clientHeight >= Math.min(600, smokeHeight - 80),
+    'Particle canvas has an unexpected size.'
+  )
   assert(checks.nonBlankCanvasPixels > 0, 'Particle canvas appears blank.')
+
+  if (process.env.ARCMIND_SMOKE_SCREENSHOT) {
+    writeFileSync(process.env.ARCMIND_SMOKE_SCREENSHOT, (await window.capturePage()).toPNG())
+  }
 
   console.log(JSON.stringify({ ok: true, checks }, null, 2))
   window.destroy()
@@ -166,6 +203,24 @@ function registerSmokeIpc() {
       message: 'Smoke test does not use a real model key.',
       recoverable: true
     }
+  }))
+  ipcMain.handle('settings:get-realtime-voice-config', () => ({
+    provider: 'codex-lb-live',
+    enabled: false,
+    baseUrl: '',
+    hasApiKey: false
+  }))
+  ipcMain.handle('settings:set-realtime-voice-config', () => ({
+    provider: 'codex-lb-live',
+    enabled: false,
+    baseUrl: '',
+    hasApiKey: false
+  }))
+  ipcMain.handle('settings:test-realtime-voice-config', () => ({
+    ok: false,
+    status: 'not_configured',
+    message: '请先配置 codex-LB。',
+    checkedAt: new Date(0).toISOString()
   }))
   ipcMain.handle('storage:get-most-recent-conversation', () => null)
   ipcMain.handle('storage:list-conversations', () => [])

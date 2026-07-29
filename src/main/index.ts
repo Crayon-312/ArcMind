@@ -1,16 +1,28 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import type { CreateMemoryInput, ModelConfig, SendChatMessageInput, SetMemoryEnabledInput, TranscribeAudioInput, UpdateMemoryInput } from '../shared'
+import type {
+  CreateMemoryInput,
+  ModelConfig,
+  RealtimeVoiceConfig,
+  SendChatMessageInput,
+  SetMemoryEnabledInput,
+  TranscribeAudioInput,
+  UpdateMemoryInput
+} from '../shared'
 import { ChatRuntime, validateChatMessages } from './ai/chatRuntime'
 import { normalizeAiError } from './ai/errors'
 import { AppLogger } from './logging/appLogger'
 import { ModelConfigStore } from './settings/modelConfigStore'
+import { RealtimeVoiceConfigStore } from './settings/realtimeVoiceConfigStore'
+import { saveRealtimeVoiceConfig } from './settings/realtimeVoiceSettings'
 import { ConversationRepository } from './storage/conversationRepository'
 import { transcribeOpenAiCompatibleAudio } from './voice/asrRuntime'
+import { probeRealtimeVoiceCapability } from './voice/realtimeVoiceCapability'
 
 const chatRuntime = new ChatRuntime()
 let modelConfigStore: ModelConfigStore | null = null
+let realtimeVoiceConfigStore: RealtimeVoiceConfigStore | null = null
 let conversationRepository: ConversationRepository | null = null
 let logger: AppLogger | null = null
 const rendererRecoveryCounts = new WeakMap<BrowserWindow, number>()
@@ -89,6 +101,7 @@ app.whenReady().then(async () => {
   })
   registerProcessGuards()
   modelConfigStore = new ModelConfigStore(app.getPath('userData'))
+  realtimeVoiceConfigStore = new RealtimeVoiceConfigStore(app.getPath('userData'))
   conversationRepository = new ConversationRepository(app.getPath('userData'))
   await conversationRepository.initialize()
 
@@ -119,6 +132,22 @@ app.whenReady().then(async () => {
     } catch (error) {
       return { ok: false, error: normalizeAiError(error) }
     }
+  })
+  ipcMain.handle('settings:get-realtime-voice-config', async () => {
+    return requireRealtimeVoiceConfigStore().getPublic()
+  })
+  ipcMain.handle('settings:set-realtime-voice-config', async (_, input: Partial<RealtimeVoiceConfig>) => {
+    try {
+      return await saveRealtimeVoiceConfig(requireRealtimeVoiceConfigStore(), input)
+    } catch (error) {
+      return Promise.reject(normalizeAiError(error))
+    }
+  })
+  ipcMain.handle('settings:test-realtime-voice-config', async (_, input?: Partial<RealtimeVoiceConfig>) => {
+    const config = input
+      ? await requireRealtimeVoiceConfigStore().preview(input)
+      : await requireRealtimeVoiceConfigStore().get()
+    return probeRealtimeVoiceCapability(config)
   })
   ipcMain.handle('chat:send-message', async (event, input: SendChatMessageInput) => {
     try {
@@ -226,6 +255,13 @@ function requireModelConfigStore(): ModelConfigStore {
     throw new Error('Model config store is not ready.')
   }
   return modelConfigStore
+}
+
+function requireRealtimeVoiceConfigStore(): RealtimeVoiceConfigStore {
+  if (!realtimeVoiceConfigStore) {
+    throw new Error('Realtime voice config store is not ready.')
+  }
+  return realtimeVoiceConfigStore
 }
 
 function requireConversationRepository(): ConversationRepository {

@@ -1,6 +1,19 @@
 import { Brain, Check, Mic, MicOff, Pencil, Plus, Send, Settings, Sparkles, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import type { AiStreamEvent, ChatMessage, ConversationState, ConversationSummary, CoreMode, LongTermMemory, ModelConfig, PublicModelConfig, RuntimeInfo } from '../../../shared'
+import type {
+  AiStreamEvent,
+  ChatMessage,
+  ConversationState,
+  ConversationSummary,
+  CoreMode,
+  LongTermMemory,
+  ModelConfig,
+  PublicModelConfig,
+  PublicRealtimeVoiceConfig,
+  RealtimeVoiceCapabilityResult,
+  RealtimeVoiceConfig,
+  RuntimeInfo
+} from '../../../shared'
 import { deriveCoreMode } from '../../../shared'
 import { useMicrophoneLevel } from '../audio/useMicrophoneLevel'
 import { ParticleCore } from '../visual/ParticleCore'
@@ -46,6 +59,10 @@ export function App(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [modelConfig, setModelConfig] = useState<PublicModelConfig | null>(null)
   const [settingsDraft, setSettingsDraft] = useState<Partial<ModelConfig>>({})
+  const [realtimeVoiceConfig, setRealtimeVoiceConfig] = useState<PublicRealtimeVoiceConfig | null>(null)
+  const [realtimeVoiceDraft, setRealtimeVoiceDraft] = useState<Partial<RealtimeVoiceConfig>>({})
+  const [realtimeVoiceCapability, setRealtimeVoiceCapability] = useState<RealtimeVoiceCapabilityResult | null>(null)
+  const [testingRealtimeVoice, setTestingRealtimeVoice] = useState(false)
   const [memoryOpen, setMemoryOpen] = useState(false)
   const [memories, setMemories] = useState<LongTermMemory[]>([])
   const [memoryDraft, setMemoryDraft] = useState('')
@@ -61,6 +78,7 @@ export function App(): JSX.Element {
       setModelConfig(config)
       setSettingsDraft(config)
     })
+    void loadRealtimeVoiceSettings()
     void loadInitialConversation()
     void refreshMemories()
   }, [])
@@ -239,6 +257,103 @@ export function App(): JSX.Element {
       setModelConfig(next)
       setSettingsDraft(next)
       setError(null)
+    }
+  }
+
+  const loadRealtimeVoiceSettings = async (): Promise<void> => {
+    const bridge = window.arcMind
+    if (!hasModelSettingsBridge(bridge)) {
+      return
+    }
+
+    try {
+      const config = await bridge.settings.getRealtimeVoiceConfig()
+      setRealtimeVoiceConfig(config)
+      setRealtimeVoiceDraft(config)
+
+      if (!config.baseUrl || !config.hasApiKey) {
+        return
+      }
+
+      setTestingRealtimeVoice(true)
+      const capability = await bridge.settings.testRealtimeVoiceConfig()
+      setRealtimeVoiceCapability(capability)
+      if (!capability.ok) {
+        setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
+      }
+
+      if (config.enabled && (capability.status === 'unsupported' || capability.status === 'auth_failed')) {
+        const disabled = await bridge.settings.setRealtimeVoiceConfig({ enabled: false })
+        setRealtimeVoiceConfig(disabled)
+        setRealtimeVoiceDraft(disabled)
+      }
+    } catch {
+      setRealtimeVoiceCapability({
+        ok: false,
+        status: 'network_failed',
+        message: '实时语音自动检测失败，请检查 codex-LB 服务。',
+        checkedAt: new Date().toISOString()
+      })
+      setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
+    } finally {
+      setTestingRealtimeVoice(false)
+    }
+  }
+
+  const updateRealtimeVoiceDraft = (patch: Partial<RealtimeVoiceConfig>): void => {
+    setRealtimeVoiceDraft((current) => ({ ...current, ...patch, enabled: false }))
+    setRealtimeVoiceCapability(null)
+  }
+
+  const testRealtimeVoiceSettings = async (): Promise<void> => {
+    const bridge = window.arcMind
+    if (!hasModelSettingsBridge(bridge)) {
+      setError(desktopBridgeUnavailableMessage)
+      return
+    }
+
+    setTestingRealtimeVoice(true)
+    try {
+      const capability = await bridge.settings.testRealtimeVoiceConfig(withoutBlankRealtimeVoiceApiKey(realtimeVoiceDraft))
+      setRealtimeVoiceCapability(capability)
+      if (!capability.ok) {
+        setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
+      }
+      setError(null)
+    } catch (unknownError) {
+      setRealtimeVoiceCapability({
+        ok: false,
+        status: 'network_failed',
+        message: errorMessage(unknownError),
+        checkedAt: new Date().toISOString()
+      })
+      setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
+    } finally {
+      setTestingRealtimeVoice(false)
+    }
+  }
+
+  const saveRealtimeVoiceSettings = async (): Promise<void> => {
+    const bridge = window.arcMind
+    if (!hasModelSettingsBridge(bridge)) {
+      setError(desktopBridgeUnavailableMessage)
+      return
+    }
+    if (realtimeVoiceDraft.enabled && realtimeVoiceCapability?.status !== 'available') {
+      setError('必须先通过 codex-LB 实时语音能力检测，才能启用该功能。')
+      return
+    }
+
+    try {
+      const next = await bridge.settings.setRealtimeVoiceConfig(
+        withoutBlankRealtimeVoiceApiKey(realtimeVoiceDraft)
+      )
+      setRealtimeVoiceConfig(next)
+      setRealtimeVoiceDraft(next)
+      setError(null)
+    } catch (unknownError) {
+      setError(errorMessage(unknownError))
+      setRealtimeVoiceDraft((current) => ({ ...current, enabled: false }))
     }
   }
 
@@ -629,55 +744,147 @@ export function App(): JSX.Element {
         </footer>
 
         {settingsOpen ? (
-          <section className="settings-panel" aria-label="模型设置">
-            <label>
-              Base URL
-              <input value={settingsDraft.baseUrl ?? ''} onChange={(event) => setSettingsDraft((current) => ({ ...current, baseUrl: event.target.value }))} />
-            </label>
-            <label>
-              Model
-              <input value={settingsDraft.model ?? ''} onChange={(event) => setSettingsDraft((current) => ({ ...current, model: event.target.value }))} />
-            </label>
-            <label>
-              API Key
-              <input
-                type="password"
-                placeholder={modelConfig?.hasApiKey ? '已配置，留空表示不修改' : '输入 API Key'}
-                onChange={(event) => setSettingsDraft((current) => ({ ...current, apiKey: event.target.value }))}
-              />
-            </label>
-            <label>
-              Temperature
-              <input
-                type="number"
-                min="0"
-                max="2"
-                step="0.1"
-                value={settingsDraft.temperature ?? 0.7}
-                onChange={(event) => setSettingsDraft((current) => ({ ...current, temperature: Number(event.target.value) }))}
-              />
-            </label>
-            <label>
-              Context
-              <input
-                type="number"
-                min="1"
-                max="40"
-                value={settingsDraft.maxContextMessages ?? 12}
-                onChange={(event) => setSettingsDraft((current) => ({ ...current, maxContextMessages: Number(event.target.value) }))}
-              />
-            </label>
-            <div className="settings-actions">
-              <button type="button" onClick={() => void saveSettings()}>
-                保存
-              </button>
-              <button type="button" onClick={() => void testSettings()}>
-                测试连接
-              </button>
+          <section className="settings-panel" aria-label="模型与实时语音设置">
+            <div className="panel-heading">
+              <span>模型与语音</span>
+              <small>本机配置</small>
             </div>
+
+            <div className="settings-section">
+              <div className="settings-section-heading">
+                <span>文字模型</span>
+                <small>OpenAI-compatible（兼容 OpenAI 请求格式）</small>
+              </div>
+              <label>
+                服务地址（Base URL）
+                <input
+                  value={settingsDraft.baseUrl ?? ''}
+                  onChange={(event) => setSettingsDraft((current) => ({ ...current, baseUrl: event.target.value }))}
+                />
+              </label>
+              <label>
+                模型名称（Model）
+                <input
+                  value={settingsDraft.model ?? ''}
+                  onChange={(event) => setSettingsDraft((current) => ({ ...current, model: event.target.value }))}
+                />
+              </label>
+              <label>
+                接口密钥（API Key）
+                <input
+                  type="password"
+                  placeholder={modelConfig?.hasApiKey ? '已配置，留空表示不修改' : '输入 API Key'}
+                  onChange={(event) => setSettingsDraft((current) => ({ ...current, apiKey: event.target.value }))}
+                />
+              </label>
+              <div className="settings-grid">
+                <label>
+                  温度（Temperature）
+                  <input
+                    type="number"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={settingsDraft.temperature ?? 0.7}
+                    onChange={(event) =>
+                      setSettingsDraft((current) => ({ ...current, temperature: Number(event.target.value) }))
+                    }
+                  />
+                </label>
+                <label>
+                  上下文条数（Context）
+                  <input
+                    type="number"
+                    min="1"
+                    max="40"
+                    value={settingsDraft.maxContextMessages ?? 12}
+                    onChange={(event) =>
+                      setSettingsDraft((current) => ({
+                        ...current,
+                        maxContextMessages: Number(event.target.value)
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+              <div className="settings-actions">
+                <button type="button" onClick={() => void saveSettings()}>
+                  保存文字模型
+                </button>
+                <button type="button" onClick={() => void testSettings()}>
+                  测试文字连接
+                </button>
+              </div>
+            </div>
+
+            <div className="settings-section settings-section-live">
+              <div className="settings-section-heading">
+                <span>GPT-Live 实时语音</span>
+                <small className="provider-badge">仅限 codex-LB</small>
+              </div>
+              <p className="settings-notice">
+                此功能使用 codex-LB 的私有 Codex Live Voice（Codex 实时语音）兼容接口，不是通用模型能力。
+                其他服务即使兼容文字接口，也不能开启实时语音。
+              </p>
+              <label>
+                codex-LB 服务根地址
+                <input
+                  value={realtimeVoiceDraft.baseUrl ?? ''}
+                  placeholder="例如：https://your-codex-lb.example.com"
+                  onChange={(event) => updateRealtimeVoiceDraft({ baseUrl: event.target.value })}
+                />
+              </label>
+              <label>
+                codex-LB 代理接口密钥（API Key）
+                <input
+                  type="password"
+                  placeholder={realtimeVoiceConfig?.hasApiKey ? '已配置，留空表示不修改' : '输入已注册的代理 API Key'}
+                  onChange={(event) => updateRealtimeVoiceDraft({ apiKey: event.target.value })}
+                />
+              </label>
+              <div
+                className={`voice-capability is-${testingRealtimeVoice ? 'checking' : realtimeVoiceCapability?.status ?? 'idle'}`}
+                role="status"
+              >
+                {testingRealtimeVoice
+                  ? '正在检测 codex-LB 实时语音能力……'
+                  : realtimeVoiceCapability?.message ?? '修改地址或密钥后，需要重新检测。'}
+              </div>
+              <label className="voice-enable-row">
+                <input
+                  type="checkbox"
+                  checked={Boolean(realtimeVoiceDraft.enabled)}
+                  disabled={testingRealtimeVoice || realtimeVoiceCapability?.status !== 'available'}
+                  onChange={(event) =>
+                    setRealtimeVoiceDraft((current) => ({ ...current, enabled: event.target.checked }))
+                  }
+                />
+                <span>
+                  启用 GPT-Live 实时语音
+                  <small>保存时主进程会再次检测，不能绕过此门禁。</small>
+                </span>
+              </label>
+              <div className="settings-actions">
+                <button
+                  type="button"
+                  disabled={testingRealtimeVoice}
+                  onClick={() => void testRealtimeVoiceSettings()}
+                >
+                  {testingRealtimeVoice ? '检测中' : '检测实时语音'}
+                </button>
+                <button type="button" disabled={testingRealtimeVoice} onClick={() => void saveRealtimeVoiceSettings()}>
+                  保存语音设置
+                </button>
+              </div>
+              <p className="settings-footnote">
+                检测只验证服务、Live Voice 路由和代理密钥，不会创建通话；ChatGPT 账户的实际语音权益会在建联时最终确认。
+              </p>
+            </div>
+
             <p className="runtime-line">
-              v{runtimeInfo?.version ?? version} · Electron {runtimeInfo?.electron ?? 'unknown'} · {runtimeInfo?.platform ?? 'browser'} {runtimeInfo?.arch ?? ''}
-              {runtimeInfo?.packaged ? ' · packaged' : ''}
+              版本 {runtimeInfo?.version ?? version} · Electron（桌面应用运行框架）{runtimeInfo?.electron ?? '未知'} ·
+              {runtimeInfo?.platform ?? '浏览器'} {runtimeInfo?.arch ?? ''}
+              {runtimeInfo?.packaged ? ' · 已打包' : ''}
             </p>
           </section>
         ) : null}
@@ -740,6 +947,16 @@ function errorMessage(error: unknown): string {
 }
 
 function withoutBlankApiKey(input: Partial<ModelConfig>): Partial<ModelConfig> {
+  if (input.apiKey !== undefined && input.apiKey.trim() === '') {
+    const { apiKey: _apiKey, ...rest } = input
+    return rest
+  }
+  return input
+}
+
+function withoutBlankRealtimeVoiceApiKey(
+  input: Partial<RealtimeVoiceConfig>
+): Partial<RealtimeVoiceConfig> {
   if (input.apiKey !== undefined && input.apiKey.trim() === '') {
     const { apiKey: _apiKey, ...rest } = input
     return rest

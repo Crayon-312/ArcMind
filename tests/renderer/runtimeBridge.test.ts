@@ -29,7 +29,25 @@ describe('runtime bridge checks', () => {
             timeoutMs: 60000,
             hasApiKey: true
           }),
-          testModelConfig: async () => ({ ok: true })
+          testModelConfig: async () => ({ ok: true }),
+          getRealtimeVoiceConfig: async () => ({
+            provider: 'codex-lb-live',
+            enabled: false,
+            baseUrl: 'https://voice.example.com',
+            hasApiKey: true
+          }),
+          setRealtimeVoiceConfig: async () => ({
+            provider: 'codex-lb-live',
+            enabled: false,
+            baseUrl: 'https://voice.example.com',
+            hasApiKey: true
+          }),
+          testRealtimeVoiceConfig: async () => ({
+            ok: true,
+            status: 'available',
+            message: '检测通过',
+            checkedAt: new Date(0).toISOString()
+          })
         }
       } as never)
     ).toBe(true)

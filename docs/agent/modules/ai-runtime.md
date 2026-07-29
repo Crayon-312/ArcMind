@@ -13,6 +13,7 @@ AI Runtime 负责大模型供应商适配、请求构造、流式响应、上下
 - `listProviders` / `validateProviderConfig`：模型配置检查。
 - 事件类型应区分 token、完成、取消、错误和元数据。
 - 当前 main process 已提供 OpenAI-compatible `/chat/completions` 流式适配，renderer 通过 preload 订阅 `AiStreamEvent`，不接触供应商 HTTP shape。
+- 文字模型配置与 GPT-Live 实时语音配置相互独立；文字模型仍允许任意 OpenAI-compatible 供应商，不因实时语音选择 codex-LB 而被绑定。
 
 ## 数据与状态
 
@@ -23,6 +24,7 @@ AI Runtime 负责大模型供应商适配、请求构造、流式响应、上下
 ## 边界规则
 
 - 供应商 SDK 或 HTTP shape 不得泄露到 UI。
+- codex-LB 私有 Live Voice 协议属于 Voice Runtime，不得混入通用文字模型适配器。
 - 所有网络错误、鉴权错误、限流和超时必须归一化。
 - Prompt 变化必须记录用途和影响范围。
 - 长期记忆必须通过 `buildChatContext` 组装，禁用或删除的记忆不得进入模型上下文。

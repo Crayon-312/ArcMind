@@ -6,6 +6,9 @@ export function hasModelSettingsBridge(bridge: ArcMindApi | undefined): bridge i
   return (
     typeof bridge?.settings?.getModelConfig === 'function' &&
     typeof bridge.settings.setModelConfig === 'function' &&
-    typeof bridge.settings.testModelConfig === 'function'
+    typeof bridge.settings.testModelConfig === 'function' &&
+    typeof bridge.settings.getRealtimeVoiceConfig === 'function' &&
+    typeof bridge.settings.setRealtimeVoiceConfig === 'function' &&
+    typeof bridge.settings.testRealtimeVoiceConfig === 'function'
   )
 }
