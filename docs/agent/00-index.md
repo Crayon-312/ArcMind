@@ -26,6 +26,7 @@
 - 模型接入或模型供应商变更：阅读 `workflows/model-integration.md` 和 `modules/ai-runtime.md`。
 - 语音输入、语音播报或音频状态：阅读 `modules/voice-runtime.md`。
 - 粒子、WebGL、动画状态机或沉浸式界面：阅读 `modules/visual-system.md`。
+- CPU、内存、磁盘、GPU 或本机系统状态展示：阅读 `modules/system-telemetry.md`。
 - 本地记忆、会话历史、设置或数据库：阅读 `modules/memory-storage.md`。
 - API Key、权限、隐私和敏感数据：阅读 `modules/security.md`。
 - 版本控制、提交、推送、发布：阅读 `workflows/version-control.md` 和 `checklists/version-control-checklist.md`。

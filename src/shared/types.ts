@@ -58,6 +58,40 @@ export interface RuntimeInfo {
   packaged: boolean
 }
 
+export type SystemMetricStatus = 'ok' | 'busy' | 'critical' | 'unknown'
+
+export interface SystemPercentMetric {
+  usagePct: number | null
+  status: SystemMetricStatus
+}
+
+export interface SystemCpuMetric extends SystemPercentMetric {
+  cores: number
+}
+
+export interface SystemMemoryMetric extends SystemPercentMetric {
+  usedBytes: number
+  totalBytes: number
+}
+
+export interface SystemDiskMetric extends SystemPercentMetric {
+  usedBytes: number | null
+  totalBytes: number | null
+}
+
+export interface SystemGpuMetric extends SystemPercentMetric {
+  name: string
+  featureStatus: string
+}
+
+export interface SystemTelemetrySnapshot {
+  capturedAt: string
+  cpu: SystemCpuMetric
+  memory: SystemMemoryMetric
+  disk: SystemDiskMetric
+  gpu: SystemGpuMetric
+}
+
 export interface AudioSignal {
   level: number
   low: number
