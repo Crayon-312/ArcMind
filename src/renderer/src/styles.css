@@ -198,6 +198,16 @@ button {
   pointer-events: none;
 }
 
+.brand-anchor-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 18px rgba(127, 216, 255, 0.2);
+}
+
 .brand-anchor h1 {
   margin: 0;
   color: rgba(232, 246, 255, 0.82);

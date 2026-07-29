@@ -36,6 +36,7 @@ function createWindow(): void {
     minHeight: 640,
     backgroundColor: '#030607',
     title: 'ArcMind',
+    icon: is.dev ? join(__dirname, '../../build/icon.png') : join(__dirname, '../renderer/icon.png'),
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',

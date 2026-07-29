@@ -51,7 +51,8 @@
       "package.json"
     ],
     "win": {
-      "signAndEditExecutable": false,
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": true,
       "target": [
         {
           "target": "nsis",
@@ -67,7 +68,9 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ArcMind"
+      "shortcutName": "ArcMind",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     }
   }
 }

@@ -869,6 +869,7 @@ export function App(): JSX.Element {
         <div className="window-drag-region" aria-hidden="true" />
 
         <header className="brand-anchor">
+          <img className="brand-anchor-icon" src="./icon.png" alt="" aria-hidden="true" />
           <h1>ArcMind</h1>
           <span className={`status-dot status-${mode}`} />
         </header>
