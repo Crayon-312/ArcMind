@@ -6,6 +6,8 @@ describe('ArcMind chat context', () => {
   it('always includes the ArcMind persona prompt', () => {
     expect(buildSystemPrompt([])).toBe(ARCMIND_PERSONA_PROMPT)
     expect(buildSystemPrompt([])).toContain('克制、可靠、注重隐私')
+    expect(buildSystemPrompt([])).toContain(':::report')
+    expect(buildSystemPrompt([])).toContain(':::choices')
   })
 
   it('injects only enabled long-term memories', () => {

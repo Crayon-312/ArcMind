@@ -13,6 +13,7 @@ AI Runtime 负责大模型供应商适配、请求构造、流式响应、上下
 - `listProviders` / `validateProviderConfig`：模型配置检查。
 - 事件类型应区分 token、完成、取消、错误和元数据。
 - 当前 main process 已提供 OpenAI-compatible `/chat/completions` 流式适配，renderer 通过 preload 订阅 `AiStreamEvent`，不接触供应商 HTTP shape。
+- 当前系统提示词要求模型在报告、方案或长说明中优先使用轻量工作台标记：`:::report` 包裹 Markdown 报告或长说明；需要用户确认或选择时必须在回答末尾使用 `:::choices`，每行格式为 `[id] 按钮文案 | 发送给模型的文本`。该标记由 renderer 解析，不改变 AI Runtime 的流式事件结构。
 
 ## 数据与状态
 
@@ -24,7 +25,7 @@ AI Runtime 负责大模型供应商适配、请求构造、流式响应、上下
 
 - 供应商 SDK 或 HTTP shape 不得泄露到 UI。
 - 所有网络错误、鉴权错误、限流和超时必须归一化。
-- Prompt 变化必须记录用途和影响范围。
+- Prompt 变化必须记录用途和影响范围；工作台标记只能作为可选呈现约定，不能要求供应商返回私有 HTTP shape。
 - 长期记忆必须通过 `buildChatContext` 组装，禁用或删除的记忆不得进入模型上下文。
 
 ## 验证要求

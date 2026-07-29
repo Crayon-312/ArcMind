@@ -16,7 +16,7 @@ interface MicrophoneLevel {
   signal: AudioSignal
   status: MicrophoneStatus
   error: string | null
-  start: () => Promise<void>
+  start: (inputStream?: MediaStream) => Promise<void>
   stop: () => void
 }
 
@@ -85,18 +85,20 @@ export function useMicrophoneLevel(): MicrophoneLevel {
     frameRef.current = requestAnimationFrame(sample)
   }, [])
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (inputStream?: MediaStream) => {
     try {
       setStatus('requesting')
       setError(null)
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      })
+      const stream =
+        inputStream ??
+        (await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        }))
 
       const audioContext = new AudioContext()
       const source = audioContext.createMediaStreamSource(stream)

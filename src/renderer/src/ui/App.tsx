@@ -1,5 +1,5 @@
-import { Brain, Check, Mic, MicOff, Pencil, Plus, Send, Settings, Sparkles, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Brain, Check, ChevronDown, FileText, Mic, MicOff, Pencil, Plus, Send, Settings, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AiStreamEvent, ChatMessage, ConversationState, ConversationSummary, CoreMode, LongTermMemory, ModelConfig, PublicModelConfig, RuntimeInfo } from '../../../shared'
 import { deriveCoreMode } from '../../../shared'
 import { useMicrophoneLevel } from '../audio/useMicrophoneLevel'
@@ -8,6 +8,9 @@ import { resolveVisualSignal } from '../visual/signal'
 import { canUseSpeechSynthesis, createUtterance, shouldAutoSpeak } from '../voice/speech'
 import { desktopBridgeUnavailableMessage, hasModelSettingsBridge } from './runtimeBridge'
 import { coreModeLabel, statusText } from './statusText'
+import { SystemTelemetryProjection } from './SystemTelemetryProjection'
+import { revealNextChunk, TYPEWRITER_FRAME_MS } from './typewriter'
+import { createOpenWorkbenchDocument, parseWorkbenchContent, stripWorkbenchMarkup, type WorkbenchDocument } from './workbench'
 
 const seedMessages: ChatMessage[] = [
   {
@@ -25,6 +28,16 @@ const fallbackConversation: ConversationState = {
   status: 'idle',
   activeRequestId: null,
   updatedAt: new Date(0).toISOString()
+}
+
+interface TypewriterState {
+  requestId: string | null
+  target: string
+  visible: string
+  finalMessage: ChatMessage | null
+  done: boolean
+  frameId: number
+  timerId: number
 }
 
 export function App(): JSX.Element {
@@ -53,6 +66,21 @@ export function App(): JSX.Element {
   const [tokenPulse, setTokenPulse] = useState(0)
   const [errorPulse, setErrorPulse] = useState(0)
   const [conversationDrawerOpen, setConversationDrawerOpen] = useState(false)
+  const [toolRailOpen, setToolRailOpen] = useState(false)
+  const [composerOpen, setComposerOpen] = useState(false)
+  const [workbenchOpen, setWorkbenchOpen] = useState(false)
+  const [workbenchDocument, setWorkbenchDocument] = useState<WorkbenchDocument>(() => parseWorkbenchContent(''))
+  const lastVisualTokenPulseAtRef = useRef(0)
+  const activeRequestIdRef = useRef<string | null>(null)
+  const streamUnsubscribeRef = useRef<(() => void) | null>(null)
+  const typewriterRef = useRef<TypewriterState>(createIdleTypewriterState())
+  const composerPanelRef = useRef<HTMLElement | null>(null)
+  const composerZoneRef = useRef<HTMLDivElement | null>(null)
+  const composerPointerInsideRef = useRef(false)
+  const composerFocusInsideRef = useRef(false)
+  const composerOpenStateRef = useRef(composerOpen)
+  const draftRef = useRef(draft)
+  const recordingStatusRef = useRef(recordingStatus)
 
   useEffect(() => {
     void window.arcMind?.getAppVersion().then(setVersion).catch(() => setVersion('0.1.0'))
@@ -64,6 +92,18 @@ export function App(): JSX.Element {
     void loadInitialConversation()
     void refreshMemories()
   }, [])
+
+  useEffect(() => {
+    draftRef.current = draft
+  }, [draft])
+
+  useEffect(() => {
+    composerOpenStateRef.current = composerOpen
+  }, [composerOpen])
+
+  useEffect(() => {
+    recordingStatusRef.current = recordingStatus
+  }, [recordingStatus])
 
   const loadInitialConversation = async (): Promise<void> => {
     const conversation = await window.arcMind?.storage.getMostRecentConversation()
@@ -109,16 +149,42 @@ export function App(): JSX.Element {
     }
   }, [memories, messages, modelConfig, tokenPulse])
 
+  const latestAssistantMessage = useMemo(() => {
+    return [...messages].reverse().find((message) => message.role === 'assistant' && message.content.trim().length > 0)
+  }, [messages])
+
+  const activeAssistantMessage = useMemo(() => {
+    return activeRequestId ? messages.find((message) => message.id === activeRequestId && message.role === 'assistant') ?? null : null
+  }, [activeRequestId, messages])
+
+  const workbenchMessage = activeAssistantMessage ?? latestAssistantMessage
+  const workbenchMarkdown = workbenchDocument.markdown || (workbenchMessage?.content ? stripWorkbenchMarkup(workbenchMessage.content) : '')
+  const composerVisible = composerOpen || recordingStatus !== 'idle'
+
   const submit = (): void => {
     const value = draft.trim()
     if (!value || conversationStatus === 'streaming') {
       return
     }
 
+    const chat = window.arcMind?.chat
+    if (!chat) {
+      setError(desktopBridgeUnavailableMessage)
+      return
+    }
+
+    cancelActiveRequest()
     setDraft('')
+    composerOpenStateRef.current = false
+    setComposerOpen(false)
     setConversationStatus('streaming')
     setError(null)
     setTokenPulse(0)
+    lastVisualTokenPulseAtRef.current = 0
+    setSettingsOpen(false)
+    setMemoryOpen(false)
+    setWorkbenchDocument(createOpenWorkbenchDocument('', '回应生成中'))
+    setWorkbenchOpen(true)
     const requestId = crypto.randomUUID()
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -137,63 +203,297 @@ export function App(): JSX.Element {
     const nextMessages = [...currentMessages, userMessage, assistantMessage]
     setMessages(nextMessages)
     setActiveRequestId(requestId)
+    activeRequestIdRef.current = requestId
+    startTypewriterReveal(requestId)
 
-    const unsubscribe = window.arcMind?.chat.onStream(requestId, (event) => {
-      handleStreamEvent(event, unsubscribe)
+    const unsubscribe = chat.onStream(requestId, (event) => {
+      handleStreamEvent(event, requestId)
     })
+    streamUnsubscribeRef.current = unsubscribe
 
-    void window.arcMind?.chat
+    void chat
       .sendMessage({ requestId, conversationId, messages: nextMessages.filter((message) => message.id !== requestId) })
       .catch((unknownError) => {
-        unsubscribe?.()
+        if (activeRequestIdRef.current !== requestId) {
+          return
+        }
+        resetTypewriterReveal()
+        releaseStream(requestId)
+        setMessages((current) => current.filter((message) => message.id !== requestId))
         setConversationStatus('error')
         setActiveRequestId(null)
+        setWorkbenchOpen(false)
+        setWorkbenchDocument(parseWorkbenchContent(''))
         setError(errorMessage(unknownError))
         setErrorPulse((value) => value + 1)
       })
   }
 
-  const handleStreamEvent = (event: AiStreamEvent, unsubscribe?: () => void): void => {
+  const handleStreamEvent = (event: AiStreamEvent, expectedRequestId: string): void => {
+    if (event.requestId !== expectedRequestId || activeRequestIdRef.current !== expectedRequestId) {
+      return
+    }
+
     if (event.type === 'token') {
-      setMessages((current) =>
-        current.map((message) => (message.id === event.requestId ? { ...message, content: `${message.content}${event.delta}` } : message))
-      )
-      setTokenPulse((value) => value + 1)
+      appendTypewriterTarget(event.requestId, event.delta)
+      pulseTokenVisual()
       return
     }
 
     if (event.type === 'done') {
-      unsubscribe?.()
-      setMessages((current) => current.map((message) => (message.id === event.requestId ? event.message : message)))
-      setConversationStatus('idle')
-      setActiveRequestId(null)
-      speakAssistantMessage(event.message.content)
-      void refreshConversationList()
+      completeTypewriterReveal(event.requestId, event.message)
       return
     }
 
     if (event.type === 'cancelled') {
-      unsubscribe?.()
+      resetTypewriterReveal()
+      releaseStream(event.requestId)
       setConversationStatus('cancelled')
       setActiveRequestId(null)
       return
     }
 
     if (event.type === 'error') {
-      unsubscribe?.()
+      resetTypewriterReveal()
+      releaseStream(event.requestId)
+      setMessages((current) => current.filter((message) => message.id !== event.requestId))
       setConversationStatus('error')
       setActiveRequestId(null)
+      setWorkbenchOpen(false)
+      setWorkbenchDocument(parseWorkbenchContent(''))
       setError(event.error.message)
       setErrorPulse((value) => value + 1)
     }
   }
 
   const cancel = (): void => {
-    if (!activeRequestId) {
+    cancelActiveRequest(true)
+  }
+
+  const releaseStream = (requestId?: string): void => {
+    if (requestId && activeRequestIdRef.current !== requestId) {
       return
     }
-    void window.arcMind?.chat.cancel(activeRequestId)
+    streamUnsubscribeRef.current?.()
+    streamUnsubscribeRef.current = null
+    activeRequestIdRef.current = null
   }
+
+  const cancelActiveRequest = (markCancelled = false): void => {
+    const requestId = activeRequestIdRef.current
+    if (requestId) {
+      void window.arcMind?.chat.cancel(requestId)
+    }
+    resetTypewriterReveal()
+    releaseStream(requestId ?? undefined)
+    setActiveRequestId(null)
+    if (markCancelled) {
+      setConversationStatus('cancelled')
+    }
+  }
+
+  const startTypewriterReveal = (requestId: string): void => {
+    resetTypewriterReveal()
+    typewriterRef.current = {
+      requestId,
+      target: '',
+      visible: '',
+      finalMessage: null,
+      done: false,
+      frameId: 0,
+      timerId: 0
+    }
+  }
+
+  const appendTypewriterTarget = (requestId: string, delta: string): void => {
+    const typewriter = typewriterRef.current
+    if (typewriter.requestId !== requestId) {
+      return
+    }
+
+    typewriter.target += delta
+    scheduleTypewriterFrame()
+  }
+
+  const completeTypewriterReveal = (requestId: string, message: ChatMessage): void => {
+    const typewriter = typewriterRef.current
+    if (typewriter.requestId !== requestId) {
+      return
+    }
+
+    typewriter.target = message.content
+    typewriter.finalMessage = message
+    typewriter.done = true
+    scheduleTypewriterFrame()
+  }
+
+  const resetTypewriterReveal = (): void => {
+    const typewriter = typewriterRef.current
+    if (typewriter.frameId) {
+      cancelAnimationFrame(typewriter.frameId)
+    }
+    if (typewriter.timerId) {
+      window.clearTimeout(typewriter.timerId)
+    }
+    typewriterRef.current = createIdleTypewriterState()
+  }
+
+  const scheduleTypewriterFrame = (): void => {
+    const typewriter = typewriterRef.current
+    if (!typewriter.requestId || typewriter.frameId || typewriter.timerId) {
+      return
+    }
+
+    typewriter.timerId = window.setTimeout(runTypewriterFrame, TYPEWRITER_FRAME_MS)
+  }
+
+  const runTypewriterFrame = (): void => {
+    const typewriter = typewriterRef.current
+    const requestId = typewriter.requestId
+    typewriter.frameId = 0
+    typewriter.timerId = 0
+
+    if (!requestId) {
+      return
+    }
+
+    const nextVisible = revealNextChunk(typewriter.visible, typewriter.target)
+    if (nextVisible !== typewriter.visible) {
+      typewriter.visible = nextVisible
+      setMessages((current) => current.map((message) => (message.id === requestId ? { ...message, content: nextVisible } : message)))
+    }
+
+    if (typewriter.visible.length < typewriter.target.length) {
+      scheduleTypewriterFrame()
+      return
+    }
+
+    if (typewriter.done && typewriter.finalMessage) {
+      const finalMessage = typewriter.finalMessage
+      typewriterRef.current = createIdleTypewriterState()
+      releaseStream(requestId)
+      setMessages((current) => current.map((message) => (message.id === requestId ? finalMessage : message)))
+      setConversationStatus('idle')
+      setActiveRequestId(null)
+      setWorkbenchDocument(createOpenWorkbenchDocument(finalMessage.content))
+      setWorkbenchOpen(true)
+      speakAssistantMessage(finalMessage.content)
+      void refreshConversationList()
+    }
+  }
+
+  const pulseTokenVisual = (): void => {
+    const now = Date.now()
+    if (now - lastVisualTokenPulseAtRef.current < 140) {
+      return
+    }
+    lastVisualTokenPulseAtRef.current = now
+    setTokenPulse((value) => value + 1)
+  }
+
+  const revealComposer = (): void => {
+    if (composerOpenStateRef.current) {
+      return
+    }
+    composerOpenStateRef.current = true
+    setComposerOpen(true)
+  }
+
+  const collapseComposer = (): void => {
+    composerPointerInsideRef.current = false
+    composerFocusInsideRef.current = false
+    composerOpenStateRef.current = false
+    setComposerOpen(false)
+  }
+
+  const maybeCollapseEmptyComposer = (): void => {
+    if (draftRef.current.trim().length > 0 || recordingStatusRef.current !== 'idle' || composerFocusInsideRef.current) {
+      return
+    }
+    composerOpenStateRef.current = false
+    setComposerOpen(false)
+  }
+
+  const targetInsideComposer = (target: EventTarget | null): boolean => {
+    if (!(target instanceof Node)) {
+      return false
+    }
+
+    return Boolean(composerPanelRef.current?.contains(target) || composerZoneRef.current?.contains(target))
+  }
+
+  const handleComposerPointerEnter = (): void => {
+    composerPointerInsideRef.current = true
+    revealComposer()
+  }
+
+  const handleComposerPointerLeave = (target: EventTarget | null): void => {
+    if (targetInsideComposer(target)) {
+      return
+    }
+    composerPointerInsideRef.current = false
+    maybeCollapseEmptyComposer()
+  }
+
+  const handleComposerMouseEnter = (): void => {
+    composerPointerInsideRef.current = true
+    revealComposer()
+  }
+
+  const handleComposerMouseLeave = (target: EventTarget | null): void => {
+    if (targetInsideComposer(target)) {
+      return
+    }
+    composerPointerInsideRef.current = false
+    maybeCollapseEmptyComposer()
+  }
+
+  const handleComposerFocus = (): void => {
+    composerFocusInsideRef.current = true
+    revealComposer()
+  }
+
+  const handleComposerBlur = (target: EventTarget | null): void => {
+    if (targetInsideComposer(target)) {
+      return
+    }
+    composerFocusInsideRef.current = false
+    maybeCollapseEmptyComposer()
+  }
+
+  useEffect(() => {
+    const handleDocumentMove = (event: PointerEvent | MouseEvent): void => {
+      if (targetInsideComposer(event.target)) {
+        composerPointerInsideRef.current = true
+        revealComposer()
+        return
+      }
+
+      if (!composerOpenStateRef.current) {
+        return
+      }
+      composerPointerInsideRef.current = false
+      maybeCollapseEmptyComposer()
+    }
+
+    document.addEventListener('pointermove', handleDocumentMove)
+    document.addEventListener('mousemove', handleDocumentMove)
+    return () => {
+      document.removeEventListener('pointermove', handleDocumentMove)
+      document.removeEventListener('mousemove', handleDocumentMove)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      const requestId = activeRequestIdRef.current
+      if (requestId) {
+        void window.arcMind?.chat.cancel(requestId)
+      }
+      resetTypewriterReveal()
+      releaseStream(requestId ?? undefined)
+    }
+  }, [])
 
   const speakAssistantMessage = (text: string): void => {
     if (!shouldAutoSpeak(muted, text)) {
@@ -243,6 +543,7 @@ export function App(): JSX.Element {
   }
 
   const createConversation = async (): Promise<void> => {
+    cancelActiveRequest()
     const conversation = await window.arcMind?.storage.createConversation('新的会话')
     if (conversation) {
       applyConversation(conversation)
@@ -251,6 +552,7 @@ export function App(): JSX.Element {
   }
 
   const openConversation = async (id: string): Promise<void> => {
+    cancelActiveRequest()
     const conversation = await window.arcMind?.storage.getConversation(id)
     if (conversation) {
       applyConversation(conversation)
@@ -258,6 +560,7 @@ export function App(): JSX.Element {
   }
 
   const deleteCurrentConversation = async (): Promise<void> => {
+    cancelActiveRequest()
     if (!conversationId || conversationId === fallbackConversation.id) {
       return
     }
@@ -270,6 +573,7 @@ export function App(): JSX.Element {
   }
 
   const clearCurrentConversation = async (): Promise<void> => {
+    cancelActiveRequest()
     const conversation = await window.arcMind?.storage.clearConversation(conversationId)
     if (conversation) {
       applyConversation(conversation)
@@ -346,6 +650,7 @@ export function App(): JSX.Element {
   }
 
   const applyConversation = (conversation: ConversationState): void => {
+    cancelActiveRequest()
     stopSpeaking()
     setConversationId(conversation.id)
     setConversationTitle(conversation.title)
@@ -376,19 +681,21 @@ export function App(): JSX.Element {
       return
     }
 
+    let stream: MediaStream | null = null
     try {
       setError(null)
       setRecordingStatus('recording')
-      await microphone.start()
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
         }
       })
+      await microphone.start(stream)
+      const recordingStream = stream
       const chunks: BlobPart[] = []
-      const recorder = new MediaRecorder(stream)
+      const recorder = new MediaRecorder(recordingStream)
 
       recorder.addEventListener('dataavailable', (event) => {
         if (event.data.size > 0) {
@@ -397,7 +704,7 @@ export function App(): JSX.Element {
       })
 
       recorder.addEventListener('stop', () => {
-        stream.getTracks().forEach((track) => track.stop())
+        recordingStream.getTracks().forEach((track) => track.stop())
         microphone.stop()
         setMediaRecorder(null)
         void transcribeChunks(chunks, recorder.mimeType || 'audio/webm')
@@ -406,6 +713,7 @@ export function App(): JSX.Element {
       setMediaRecorder(recorder)
       recorder.start()
     } catch (unknownError) {
+      stream?.getTracks().forEach((track) => track.stop())
       microphone.stop()
       setRecordingStatus('idle')
       setError(errorMessage(unknownError) || '麦克风不可用。')
@@ -425,6 +733,7 @@ export function App(): JSX.Element {
 
       if (result?.text) {
         setDraft((current) => (current ? `${current} ${result.text}` : result.text))
+        revealComposer()
       }
       setRecordingStatus('idle')
     } catch (unknownError) {
@@ -435,50 +744,18 @@ export function App(): JSX.Element {
   }
 
   return (
-    <main className={`app-shell ${conversationDrawerOpen ? 'is-conversation-drawer-open' : ''}`}>
-      <ParticleCore mode={mode} signal={visualSignal} sidebarOpen={conversationDrawerOpen} />
+    <main
+      className={`app-shell ${conversationDrawerOpen ? 'is-conversation-drawer-open' : ''} ${toolRailOpen ? 'is-tool-rail-open' : ''} ${workbenchOpen ? 'is-workbench-open' : ''} ${composerVisible ? 'is-composer-open' : ''}`}
+    >
+      <ParticleCore mode={mode} signal={visualSignal} sidebarOpen={conversationDrawerOpen} workbenchOpen={workbenchOpen || settingsOpen || memoryOpen} composerOpen={composerVisible} />
 
       <div className="ambient-grid" />
       <section className="command-surface" aria-label="ArcMind conversation">
-        <header className="top-bar">
-          <div className="brand-lockup">
-            <span className="brand-mark">
-              <Sparkles size={18} />
-            </span>
-            <div>
-              <h1>ArcMind</h1>
-              <p>{conversationTitle}</p>
-            </div>
-          </div>
-          <div className="status-strip">
-            <span className={`status-dot status-${mode}`} />
-            <span>{statusText(mode, microphone.status)}</span>
-            <span>v{version}</span>
-          </div>
-          <div className="top-actions">
-            <button
-              className="icon-button"
-              type="button"
-              title="记忆"
-              onClick={() => {
-                setMemoryOpen((value) => !value)
-                setSettingsOpen(false)
-              }}
-            >
-              <Brain size={18} />
-            </button>
-            <button
-              className="icon-button"
-              type="button"
-              title="设置"
-              onClick={() => {
-                setSettingsOpen((value) => !value)
-                setMemoryOpen(false)
-              }}
-            >
-              <Settings size={18} />
-            </button>
-          </div>
+        <div className="window-drag-region" aria-hidden="true" />
+
+        <header className="brand-anchor">
+          <h1>ArcMind</h1>
+          <span className={`status-dot status-${mode}`} />
         </header>
 
         <div
@@ -493,13 +770,12 @@ export function App(): JSX.Element {
           }}
         >
           <button
-            className="conversation-edge-tab"
+            className="corner-hotspot corner-hotspot-left"
             type="button"
             title="会话列表"
+            aria-label="会话列表"
             onClick={() => setConversationDrawerOpen((value) => !value)}
-          >
-            会话
-          </button>
+          />
           <aside className={`conversation-list ${conversationDrawerOpen ? 'is-open' : ''}`} aria-label="会话历史">
             <div className="conversation-list-header">
               <span>会话</span>
@@ -531,6 +807,83 @@ export function App(): JSX.Element {
           </aside>
         </div>
 
+        <div
+          className="tool-rail-zone"
+          onPointerEnter={() => setToolRailOpen(true)}
+          onPointerLeave={() => setToolRailOpen(false)}
+          onFocus={() => setToolRailOpen(true)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) {
+              setToolRailOpen(false)
+            }
+          }}
+        >
+          <button className="corner-hotspot corner-hotspot-right" type="button" title="工具" aria-label="工具" onClick={() => setToolRailOpen((value) => !value)} />
+          <aside className={`tool-rail ${toolRailOpen ? 'is-open' : ''}`} aria-label="隐式工具">
+            <button
+              className="tool-icon-button is-status"
+              type="button"
+              title={`回应 ${conversationStatus === 'streaming' ? '生成中' : statusText(mode, microphone.status)}`}
+              onClick={() => {
+                if (latestAssistantMessage) {
+                  const nextWorkbenchDocument = parseWorkbenchContent(latestAssistantMessage.content)
+                  setWorkbenchDocument(nextWorkbenchDocument.shouldOpen ? nextWorkbenchDocument : { ...nextWorkbenchDocument, shouldOpen: true, kind: 'long-answer' })
+                }
+                setWorkbenchOpen((value) => !value)
+                setSettingsOpen(false)
+                setMemoryOpen(false)
+              }}
+            >
+              <FileText size={16} />
+              <span className={`status-dot status-${mode}`} />
+            </button>
+            <button
+              className="tool-icon-button"
+              type="button"
+              title={`记忆 ${hudSummary.enabledMemories}/${hudSummary.totalMemories}`}
+              onClick={() => {
+                setMemoryOpen((value) => !value)
+                setSettingsOpen(false)
+                setWorkbenchOpen(false)
+              }}
+            >
+              <Brain size={16} />
+            </button>
+            <button
+              className="tool-icon-button"
+              type="button"
+              title="设置"
+              onClick={() => {
+                setSettingsOpen((value) => !value)
+                setMemoryOpen(false)
+                setWorkbenchOpen(false)
+              }}
+            >
+              <Settings size={16} />
+            </button>
+            <button
+              className="tool-icon-button"
+              type="button"
+              title={speaking ? '停止播报' : muted ? '开启播报' : '关闭播报'}
+              onClick={() => {
+                if (speaking) {
+                  stopSpeaking()
+                  return
+                }
+                setMuted((value) => {
+                  const next = !value
+                  if (next) {
+                    stopSpeaking()
+                  }
+                  return next
+                })
+              }}
+            >
+              {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            </button>
+          </aside>
+        </div>
+
         <section className="hero-stage" aria-label="ArcMind core status">
           <div className="core-readout">
             <span>弦核模式</span>
@@ -538,47 +891,85 @@ export function App(): JSX.Element {
           </div>
         </section>
 
-        <aside className="hud-panel side-hud" aria-label="弦核状态">
-          <div className="hud-row">
-            <span>模型</span>
-            <strong>{hudSummary.modelReady ? hudSummary.model : '未配置'}</strong>
-          </div>
-          <div className="hud-row">
-            <span>会话</span>
-            <strong>{hudSummary.messageCount} 条</strong>
-          </div>
-          <div className="hud-row">
-            <span>记忆</span>
-            <strong>
-              {hudSummary.enabledMemories}/{hudSummary.totalMemories}
-            </strong>
-          </div>
-          <div className="hud-row">
-            <span>令牌</span>
-            <strong>{hudSummary.tokenPulse}</strong>
-          </div>
-          <div className="hud-row">
-            <span>麦克风</span>
-            <strong>{Math.round(microphone.level * 100)}%</strong>
-          </div>
-          <div className="signal-bars" aria-label="音频频段">
-            <span style={{ transform: `scaleY(${0.18 + visualSignal.audio.low * 0.82})` }} />
-            <span style={{ transform: `scaleY(${0.18 + visualSignal.audio.mid * 0.82})` }} />
-            <span style={{ transform: `scaleY(${0.18 + visualSignal.audio.high * 0.82})` }} />
-            <span style={{ transform: `scaleY(${0.18 + visualSignal.audio.rhythm * 0.82})` }} />
-          </div>
-        </aside>
+        <SystemTelemetryProjection hidden={workbenchOpen || settingsOpen || memoryOpen} />
 
-        <section className="conversation-panel" aria-label="对话">
-          {messages.map((message) => (
-            <article className={`message message-${message.role}`} key={message.id}>
-              <span>{message.role === 'assistant' ? 'ArcMind' : '你'}</span>
-              <p>{message.content || (message.role === 'assistant' && conversationStatus === 'streaming' ? '正在连接模型...' : '')}</p>
-            </article>
-          ))}
+        <section className={`workbench-panel ${workbenchOpen ? 'is-open' : ''}`} aria-label="工作台" aria-hidden={!workbenchOpen}>
+          <div className="workbench-header">
+            <div>
+              <span>Workbench</span>
+              <strong>{workbenchDocument.title}</strong>
+            </div>
+            <button className="icon-button" type="button" title="关闭工作台" onClick={() => setWorkbenchOpen(false)}>
+              <X size={16} />
+            </button>
+          </div>
+          <div className="markdown-body">
+            {workbenchMarkdown ? renderMarkdown(workbenchMarkdown) : conversationStatus === 'streaming' ? <p className="streaming-placeholder">正在生成回应...</p> : null}
+          </div>
+          {workbenchDocument.choices.length > 0 ? (
+            <div className="choice-list">
+              {workbenchDocument.choices.map((choice) => (
+                <button
+                  key={choice.id}
+                  type="button"
+                  onClick={() => {
+                    setDraft(choice.value)
+                    revealComposer()
+                    setWorkbenchOpen(false)
+                  }}
+                >
+                  {choice.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </section>
 
-        <footer className="composer">
+        <div
+          className="composer-zone"
+          ref={composerZoneRef}
+          onPointerEnter={handleComposerPointerEnter}
+          onPointerMove={handleComposerPointerEnter}
+          onPointerLeave={(event) => handleComposerPointerLeave(event.relatedTarget)}
+          onMouseEnter={handleComposerMouseEnter}
+          onMouseMove={handleComposerMouseEnter}
+          onMouseLeave={(event) => handleComposerMouseLeave(event.relatedTarget)}
+          onFocus={handleComposerFocus}
+          onBlur={(event) => handleComposerBlur(event.relatedTarget)}
+        >
+          <button className="composer-handle" type="button" title="输入" onClick={revealComposer}>
+            <span />
+          </button>
+        </div>
+
+        <div className={`composer-impact ${composerVisible ? 'is-active' : ''}`} aria-hidden="true">
+          <span className="impact-edge" />
+          <span className="impact-spark impact-spark-a" />
+          <span className="impact-spark impact-spark-b" />
+          <span className="impact-spark impact-spark-c" />
+        </div>
+
+        <div className={`composer-source-ripple ${composerVisible ? 'is-active' : ''}`} aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+
+        <footer
+          className={`composer ${composerVisible ? 'is-open' : ''}`}
+          ref={composerPanelRef}
+          onPointerEnter={handleComposerPointerEnter}
+          onPointerMove={handleComposerPointerEnter}
+          onPointerLeave={(event) => handleComposerPointerLeave(event.relatedTarget)}
+          onMouseEnter={handleComposerMouseEnter}
+          onMouseMove={handleComposerMouseEnter}
+          onMouseLeave={(event) => handleComposerMouseLeave(event.relatedTarget)}
+          onFocus={handleComposerFocus}
+          onBlur={(event) => handleComposerBlur(event.relatedTarget)}
+        >
+          <button className="composer-collapse-button" type="button" title="收起输入框" aria-label="收起输入框" onClick={collapseComposer}>
+            <ChevronDown size={16} />
+          </button>
           <button
             className={`round-button ${microphone.status === 'listening' ? 'is-active' : ''}`}
             type="button"
@@ -589,7 +980,10 @@ export function App(): JSX.Element {
           </button>
           <input
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => {
+              setDraft(event.target.value)
+              revealComposer()
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 submit()
@@ -605,26 +999,6 @@ export function App(): JSX.Element {
             onClick={conversationStatus === 'streaming' ? cancel : submit}
           >
             {conversationStatus === 'streaming' ? <Square size={16} /> : <Send size={18} />}
-          </button>
-          <button
-            className="icon-button"
-            type="button"
-            title={speaking ? '停止播报' : muted ? '开启播报' : '关闭播报'}
-            onClick={() => {
-              if (speaking) {
-                stopSpeaking()
-                return
-              }
-              setMuted((value) => {
-                const next = !value
-                if (next) {
-                  stopSpeaking()
-                }
-                return next
-              })
-            }}
-          >
-            {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         </footer>
 
@@ -745,4 +1119,165 @@ function withoutBlankApiKey(input: Partial<ModelConfig>): Partial<ModelConfig> {
     return rest
   }
   return input
+}
+
+function createIdleTypewriterState(): TypewriterState {
+  return {
+    requestId: null,
+    target: '',
+    visible: '',
+    finalMessage: null,
+    done: false,
+    frameId: 0,
+    timerId: 0
+  }
+}
+
+function renderMarkdown(markdown: string): JSX.Element[] {
+  const lines = markdown.split(/\r?\n/)
+  const nodes: JSX.Element[] = []
+  let index = 0
+
+  while (index < lines.length) {
+    const line = lines[index]
+
+    if (!line.trim()) {
+      index += 1
+      continue
+    }
+
+    if (line.startsWith('```')) {
+      const code: string[] = []
+      index += 1
+      while (index < lines.length && !lines[index].startsWith('```')) {
+        code.push(lines[index])
+        index += 1
+      }
+      index += 1
+      nodes.push(
+        <pre key={`code-${index}`}>
+          <code>{code.join('\n')}</code>
+        </pre>
+      )
+      continue
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/)
+    if (heading) {
+      const level = heading[1].length
+      const text = renderInline(heading[2])
+      nodes.push(level === 1 ? <h2 key={`h-${index}`}>{text}</h2> : level === 2 ? <h3 key={`h-${index}`}>{text}</h3> : <h4 key={`h-${index}`}>{text}</h4>)
+      index += 1
+      continue
+    }
+
+    if (/^\|.+\|$/.test(line.trim())) {
+      const rows: string[][] = []
+      while (index < lines.length && /^\|.+\|$/.test(lines[index].trim())) {
+        const cells = lines[index]
+          .trim()
+          .replace(/^\||\|$/g, '')
+          .split('|')
+          .map((cell) => cell.trim())
+        if (!cells.every((cell) => /^:?-{3,}:?$/.test(cell))) {
+          rows.push(cells)
+        }
+        index += 1
+      }
+      const [head, ...body] = rows
+      nodes.push(
+        <table key={`table-${index}`}>
+          <thead>
+            <tr>{head?.map((cell, cellIndex) => <th key={`th-${cellIndex}`}>{renderInline(cell)}</th>)}</tr>
+          </thead>
+          <tbody>
+            {body.map((row, rowIndex) => (
+              <tr key={`tr-${rowIndex}`}>{row.map((cell, cellIndex) => <td key={`td-${cellIndex}`}>{renderInline(cell)}</td>)}</tr>
+            ))}
+          </tbody>
+        </table>
+      )
+      continue
+    }
+
+    if (/^[-*]\s+/.test(line.trim())) {
+      const items: string[] = []
+      while (index < lines.length && /^[-*]\s+/.test(lines[index].trim())) {
+        items.push(lines[index].trim().replace(/^[-*]\s+/, ''))
+        index += 1
+      }
+      nodes.push(
+        <ul key={`ul-${index}`}>
+          {items.map((item, itemIndex) => (
+            <li key={`li-${itemIndex}`}>{renderInline(item)}</li>
+          ))}
+        </ul>
+      )
+      continue
+    }
+
+    if (/^\d+[.)、]\s+/.test(line.trim())) {
+      const items: string[] = []
+      while (index < lines.length && /^\d+[.)、]\s+/.test(lines[index].trim())) {
+        items.push(lines[index].trim().replace(/^\d+[.)、]\s+/, ''))
+        index += 1
+      }
+      nodes.push(
+        <ol key={`ol-${index}`}>
+          {items.map((item, itemIndex) => (
+            <li key={`oli-${itemIndex}`}>{renderInline(item)}</li>
+          ))}
+        </ol>
+      )
+      continue
+    }
+
+    const paragraph: string[] = []
+    while (
+      index < lines.length &&
+      lines[index].trim() &&
+      !/^(#{1,3})\s+/.test(lines[index]) &&
+      !/^[-*]\s+/.test(lines[index].trim()) &&
+      !/^\d+[.)、]\s+/.test(lines[index].trim()) &&
+      !/^\|.+\|$/.test(lines[index].trim()) &&
+      !lines[index].startsWith('```')
+    ) {
+      paragraph.push(lines[index].trim())
+      index += 1
+    }
+    nodes.push(<p key={`p-${index}`}>{renderInline(paragraph.join(' '))}</p>)
+  }
+
+  return nodes
+}
+
+function renderInline(text: string): Array<string | JSX.Element> {
+  const parts: Array<string | JSX.Element> = []
+  const pattern = /(\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = pattern.exec(text))) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index))
+    }
+    if (match[2]) {
+      parts.push(<strong key={`strong-${match.index}`}>{match[2]}</strong>)
+    } else if (match[3]) {
+      parts.push(<code key={`inline-code-${match.index}`}>{match[3]}</code>)
+    } else if (match[4] && match[5]) {
+      parts.push(
+        <a key={`link-${match.index}`} href={match[5]} target="_blank" rel="noreferrer">
+          {match[4]}
+        </a>
+      )
+    }
+    lastIndex = pattern.lastIndex
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex))
+  }
+
+  return parts
 }
