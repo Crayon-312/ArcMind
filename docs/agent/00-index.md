@@ -29,6 +29,7 @@
 - CPU、内存、磁盘、GPU 或本机系统状态展示：阅读 `modules/system-telemetry.md`。
 - 本地记忆、会话历史、设置或数据库：阅读 `modules/memory-storage.md`。
 - API Key、权限、隐私和敏感数据：阅读 `modules/security.md`。
+- 依赖漏洞审计、暂缓修复和升级复查：阅读 `dependency-security.md`。
 - 版本控制、提交、推送、发布：阅读 `workflows/version-control.md` 和 `checklists/version-control-checklist.md`。
 
 ## 文档维护原则

@@ -4,6 +4,22 @@
 
 ## 已采纳
 
+### 2026-07-29：区分 ChatGPT Plus Live 产品能力与 ArcMind 私有接口接入能力
+
+- 状态：已采纳。
+- 产品事实：OpenAI 官方 [ChatGPT Voice](https://help.openai.com/en/articles/20001274-chatgpt-voice) 当前说明付费计划使用 `GPT-Live-1`；Plus 用户可直接在 ChatGPT.com、官方移动端和受支持的桌面 Chat 中使用最新 Live Voice，不需要购买 OpenAI API 额度，也不要求 macOS。
+- 接入边界：上述产品权益不等于存在一个受支持、可供第三方桌面应用调用的 Plus 私有 Live API。ArcMind 当前通过 codex-LB 模拟 ChatGPT/Codex 私有协议；现有 HTTP 403 更指向该私有协议适配、sideband 与 attestation 链路，而不是已经证明 Plus 账户缺少语音权益。
+- 苹果限制原因：`Wei-Shaw/sub2api` 当前借用 Apple Silicon 版官方 ChatGPT.app 内的 `devicecheck.node` 和运行时生成 `x-oai-attestation` DeviceCheck 证明，因此它要求 Apple Silicon macOS 与已安装的官方应用。该要求属于第三方中转实现，不属于 Plus Live Voice 本身；Windows 用户直接使用 ChatGPT.com 或官方 Windows 应用不受影响。
+- 当前选择：只要求立即使用最新 Live Voice 时，使用 ChatGPT.com 或官方 Windows 应用；要求嵌入 ArcMind 且接受 API 计费时，采用 OpenAI 公共 Realtime API；要求嵌入 ArcMind、只使用 Plus/Pro OAuth 订阅且不使用 API 计费时，当前 Windows/Linux 环境没有已找到并经正式源码证明可用的成熟中转，不推荐购买或部署未提供 attestation、账户绑定 sideband 与真实远端音频证据的服务。
+- 官方 Codex 边界：`openai/codex` 的 app-server 已有实时协议和 `attestation/generate` 协作，但证明由官方桌面宿主处理，app-server 自身不是可直接暴露给 ArcMind 的通用 Plus Live 中转。
+
+### 2026-07-29：依赖漏洞暂缓修复，实时语音建联优先
+
+- 状态：已采纳。
+- 决策：保留当前依赖版本，不运行 `npm audit fix` 或强制跨大版本升级；首页实时语音建联作为当前最高优先级任务。
+- 已知风险：当前锁定依赖包含 2 个 critical、15 个 high、4 个 moderate 受影响包；完整清单、暴露面和后续修复入口见 `dependency-security.md`。
+- 复查条件：实时语音主链路调通后，或进入发布/安装包交付前，重新执行依赖审计并按生产运行时、构建链、开发工具链顺序处理。
+
 ### 2026-07-29：实时语音启用时采用通话优先交互和七状态视觉
 
 - 状态：已采纳。
@@ -21,7 +37,8 @@
 - 门禁：只有检测状态为 `available` 才允许用户在界面选择启用；保存 `enabled: true` 时 main process 必须再次检测，失败则拒绝持久化。地址或密钥草稿变化后，renderer 立即使旧检测结果失效并关闭草稿中的启用状态。
 - 已验证事实：以上路由和密钥要求来自 2026-07-29 检查的 `Soju06/codex-lb` 当前源码与 `docs/live-voice.md`。codex-LB 明确说明这是已安装 Codex 应用使用的私有兼容面，不是 OpenAI 公共 Realtime API，也不代理 WebRTC 媒体。
 - 官方边界：OpenAI 的 [Realtime and audio](https://developers.openai.com/api/docs/guides/realtime) 文档说明，公共 GA WebRTC 流程使用 `POST /v1/realtime/client_secrets` 和 `/v1/realtime/calls`；这与本项目当前探测的 codex-LB 私有 `/backend-api/codex/realtime/calls` 路径不同。
-- 边界：该检测只能确认 codex-LB 服务、Live Voice 路由和代理密钥；ChatGPT 账户实际语音权益只能在建立真实会话时由上游最终确认。后续决策已经在 renderer/main 分层实现 WebRTC 通话创建与实时通话状态机；私有 WebSocket 控制侧通道仍不是本项目依赖的稳定公共契约。
+- 运行核验：2026-07-29 通过只读 SSH 确认 VPS 当前运行 `codex-lb v1.22.0`（提交 `4c0dbc9ceb2b5d70204ea7603cf1b4bef83db234`）。该版本只有通话创建 POST 路由，没有 2026-07-27 后合并的账户绑定 Live Voice sideband；上游对 3 次既有语音创建请求均返回 HTTP 403 `forbidden`，涉及 2 个不同的活动 Plus 账户。诊断仅保存账户数量和状态类别，不保存服务器连接信息、账户标识或令牌。
+- 边界：该检测只能确认 codex-LB 服务、Live Voice 路由和代理密钥；ChatGPT Plus 账户不能等价替代 OpenAI API Key，也不能证明使用公开 `gpt-realtime-2.1`。后续决策已经在 renderer/main 分层实现 WebRTC 通话创建与实时通话状态机；私有 WebSocket 控制侧通道仍不是本项目依赖的稳定公共契约。
 - 原因：实时语音协议与普通 OpenAI-compatible 文字接口不是同一能力。独立配置可以保留任意文字模型供应商，同时以失败关闭方式防止不支持的中转服务被误启用。
 
 ### 2026-06-30：v1 模型接入采用 OpenAI-compatible HTTP 适配层
@@ -97,6 +114,15 @@
 - 原因：桌面形态更适合沉浸式视觉、语音、常驻窗口、快捷键和本地记忆。
 
 ## 候选
+
+### 2026-07-29：以 Apple Silicon macOS 上的 sub2api 作为私有 Live Voice 候选中转
+
+- 状态：待验证。
+- 候选：`Wei-Shaw/sub2api v0.1.168`。仓库源码已验证存在 `POST /backend-api/codex/realtime/calls`、`WS /backend-api/codex/{call_id}`、`POST /v1/live`、`WS /v1/live/{call_id}`、账户绑定、创建阶段最多 4 个账户故障转移和 `x-oai-attestation` 生成。
+- 账号边界：Live 调度只接受 OpenAI OAuth 订阅账户，不接受 OpenAI API Key、Personal Access Token 或 Agent Identity。
+- 部署硬限制：attestation 当前只支持 Apple Silicon macOS，运行节点必须安装官方 ChatGPT.app；Linux 和 Windows 明确不支持。当前 Linux VPS 不能原地替换为该方案。
+- 采用门槛：候选服务端的管理员 `GET /admin/groups/live-capability` 必须返回 `supported: true`，目标分组必须启用 `allow_live`，并完成一次真实 SDP 创建、sideband 建联和远端音频验证。商业中转站仅宣称“基于 sub2api”不构成能力证据。
+- 风险：该方案仍依赖 ChatGPT 私有协议和 DeviceCheck 实现，官方变化可能再次导致失效，也不能证明私有 `gpt-realtime` 别名对应公开模型的确切版本。
 
 ### 后续评估：Tauri 替代 Electron
 
