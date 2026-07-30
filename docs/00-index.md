@@ -25,6 +25,7 @@
 - `product/02-scope-and-requirements.md`：功能需求、质量要求和优先级。
 - `product/03-users-and-scenarios.md`：用户类型和关键使用场景。
 - `product/04-delivery-roadmap.md`：从文档基线到手机端、云端和工作机端的交付顺序。
+- `product/05-build-sequence.md`：云端先行、纵向切片联调的具体实施顺序提议。
 
 ### 架构（`docs/architecture/`）
 
@@ -36,6 +37,8 @@
 - `architecture/06-data-and-memory.md`：会话、记忆、任务和提醒的数据职责。
 - `architecture/07-security-and-deployment.md`：传输、身份、设备、权限和部署边界。
 - `architecture/08-technology-selection.md`：尚未定案的技术选型及决策门禁。
+- `architecture/09-repository-and-deployable-apps.md`：一个仓库、三套应用和共享契约的代码组织提议。
+- `architecture/10-three-end-risk-review.md`：三端方案的一致性检查、风险和修正建议。
 
 ### 领域与模块
 
@@ -57,8 +60,10 @@
 - `decisions/0001-v2-independent-line.md`：V2 与旧版双线并存决策。
 - `decisions/0002-cloud-centered-topology.md`：采用云端中枢和可选工作机扩展的决策。
 - `decisions/0003-development-engine-boundary.md`：开发协作引擎与产品运行时分离决策。
+- `decisions/0004-three-app-monorepo.md`：单仓库三应用的待确认决策。
 - `plans/0001-v2-documentation-foundation.md`：本轮文档基线落实台账。
 - `plans/0002-v2-design-readiness.md`：领域与模块设计细化台账。
+- `plans/0003-three-app-architecture-review.md`：三端代码组织和开发顺序审查台账。
 - `quality/01-documentation-acceptance.md`：当前阶段的文档验收口径。
 - `quality/02-phase-1-design-acceptance.md`：进入第一阶段代码开发前的设计门禁。
 

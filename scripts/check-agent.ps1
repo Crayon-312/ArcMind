@@ -241,6 +241,9 @@ $RequiredFiles = @(
     "docs/00-index.md",
     "docs/domain/00-glossary.md",
     "docs/domain/01-core-domain-model.md",
+    "docs/product/05-build-sequence.md",
+    "docs/architecture/09-repository-and-deployable-apps.md",
+    "docs/architecture/10-three-end-risk-review.md",
     "docs/modules/mobile-web.md",
     "docs/modules/identity-access.md",
     "docs/modules/conversation-runtime.md",
@@ -252,7 +255,9 @@ $RequiredFiles = @(
     "docs/business/04-identity-and-device-flow.md",
     "docs/contracts/02-cloud-public-api.md",
     "docs/contracts/03-workstation-channel.md",
+    "docs/decisions/0004-three-app-monorepo.md",
     "docs/plans/0002-v2-design-readiness.md",
+    "docs/plans/0003-three-app-architecture-review.md",
     "docs/quality/02-phase-1-design-acceptance.md"
 )
 
