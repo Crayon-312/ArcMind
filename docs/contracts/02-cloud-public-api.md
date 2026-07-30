@@ -1,0 +1,111 @@
+# 云端公开 API 契约草案
+
+状态：draft
+最后校验日期：2026-07-30
+
+## 目标
+
+本契约描述手机 Web 端可以依赖的资源语义。当前不锁定后端框架，路径和载荷在实现前仍可调整，但资源归属和越权边界必须保持。
+
+## 通用约定
+
+- 基础前缀暂定为 `/api/v1`。
+- 请求和响应使用版本化 JSON（JavaScript 对象表示法）结构；实时音频除外。
+- 所有时间使用带时区的 ISO 8601（国际标准时间格式），服务端保存标准时间。
+- 创建或改变副作用的请求支持幂等标识。
+- 列表接口采用稳定游标分页，不以客户端页码表达实时数据位置。
+- 错误响应包含稳定错误码、用户可读摘要、是否可重试和关联标识。
+- 手机端只访问本文件定义的公开资源，不访问内部管理或工作机接口。
+
+## 身份资源
+
+| 方法 | 路径 | 用途 | 状态 |
+|---|---|---|---|
+| `POST` | `/auth/registrations` | 发起邮箱注册 | draft |
+| `POST` | `/auth/registrations/{id}/verify` | 完成邮箱验证 | draft |
+| `POST` | `/auth/sessions` | 创建 Web 登录会话 | draft |
+| `DELETE` | `/auth/sessions/current` | 退出当前会话 | draft |
+| `DELETE` | `/auth/sessions` | 撤销当前用户全部 Web 会话 | draft |
+| `GET` | `/me` | 获取当前用户和基础偏好 | draft |
+| `PATCH` | `/me/preferences` | 更新时区、语言和交互偏好 | draft |
+
+## 会话资源
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| `POST` | `/conversations` | 创建文字或实时语音会话记录 |
+| `GET` | `/conversations` | 查询会话摘要列表 |
+| `GET` | `/conversations/{conversation_id}` | 获取会话详情和最终轮次 |
+| `POST` | `/conversations/{conversation_id}/turns` | 提交文字轮次 |
+| `POST` | `/conversations/{conversation_id}/realtime-sessions` | 创建短期实时连接引导信息 |
+| `POST` | `/conversations/{conversation_id}/end` | 结束会话并触发摘要收尾 |
+
+实时连接引导信息只能支持当前会话和短期连接，不得向浏览器暴露云端长期供应商权限。
+
+## 任务与审批资源
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| `GET` | `/tasks` | 查询当前用户任务列表 |
+| `GET` | `/tasks/{task_id}` | 获取任务、计划、步骤和最新状态 |
+| `POST` | `/task-drafts/{draft_id}/confirm` | 确认指定草稿和计划版本 |
+| `POST` | `/task-drafts/{draft_id}/discard` | 放弃任务草稿 |
+| `POST` | `/tasks/{task_id}/cancel` | 请求取消任务 |
+| `POST` | `/tasks/{task_id}/revisions` | 提交任务范围变更请求 |
+| `GET` | `/tasks/{task_id}/events` | 查询可展示的任务事件 |
+| `POST` | `/approvals/{approval_id}/decisions` | 批准或拒绝具体动作 |
+
+确认请求必须同时携带草稿版本；审批请求必须匹配未过期的动作范围。
+
+## 工作机资源
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| `GET` | `/workstations` | 查询已绑定工作机和在线摘要 |
+| `POST` | `/workstation-bindings` | 创建短期绑定挑战 |
+| `POST` | `/workstation-bindings/{binding_id}/confirm` | 在手机端确认设备绑定 |
+| `PATCH` | `/workstations/{workstation_id}` | 修改设备显示名或偏好 |
+| `DELETE` | `/workstations/{workstation_id}` | 解除设备关系 |
+
+## 提醒、通知与记忆资源
+
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| `GET/POST` | `/reminders` | 查询或创建提醒 |
+| `PATCH/DELETE` | `/reminders/{reminder_id}` | 修改、关闭或删除提醒 |
+| `GET` | `/notifications` | 查询消息中心 |
+| `POST` | `/notifications/{notification_id}/read` | 标记消息已读 |
+| `GET` | `/memories` | 查询用户可管理的长期记忆 |
+| `PATCH` | `/memories/{memory_id}` | 更正或调整记忆状态 |
+| `DELETE` | `/memories/{memory_id}` | 删除长期记忆及其索引副本 |
+
+## 错误结构草案
+
+```json
+{
+  "error": {
+    "code": "TASK_PLAN_VERSION_CONFLICT",
+    "message": "任务计划已更新，请重新确认。",
+    "retryable": false,
+    "correlation_id": "request-reference"
+  }
+}
+```
+
+## 关键错误类别
+
+| 类别 | 示例 | 客户端处理 |
+|---|---|---|
+| 身份失效 | `AUTH_SESSION_EXPIRED` | 清理交互状态并重新登录 |
+| 版本冲突 | `TASK_PLAN_VERSION_CONFLICT` | 刷新真实数据后重新确认 |
+| 权限拒绝 | `ACTION_NOT_ALLOWED` | 不自动重试，展示范围 |
+| 资源离线 | `WORKSTATION_OFFLINE` | 展示等待、换设备或取消 |
+| 供应商不可用 | `REALTIME_PROVIDER_UNAVAILABLE` | 提供重连或文字降级 |
+| 速率限制 | `RATE_LIMITED` | 按服务端建议等待 |
+
+## 待定项
+
+- 登录机制对应的具体请求字段。
+- 实时事件采用 WebSocket（网页套接字）还是 Server-Sent Events（服务器推送事件）。
+- 大型产物上传、下载和临时访问契约。
+- API Schema（接口模式）生成、兼容和弃用策略。

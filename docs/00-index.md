@@ -37,12 +37,20 @@
 - `architecture/07-security-and-deployment.md`：传输、身份、设备、权限和部署边界。
 - `architecture/08-technology-selection.md`：尚未定案的技术选型及决策门禁。
 
+### 领域与模块
+
+- `domain/00-glossary.md`：产品统一语言和容易混淆的术语边界。
+- `domain/01-core-domain-model.md`：核心业务对象、关系、所有权和不变量。
+- `modules/`：手机端、身份、会话、主 Agent、任务、记忆、提醒和工作机等模块卡片。
+
 ### 业务与契约
 
 - `business/01-conversation-flow.md`：实时对话到任务确认的主流程。
 - `business/02-task-lifecycle.md`：任务状态机、执行与进度反馈。
 - `business/03-reminder-and-notification.md`：定时提醒和完成通知。
 - `contracts/01-cross-end-events.md`：跨端事件的语义级契约基线。
+- `contracts/02-cloud-public-api.md`：手机端访问云端的资源级 API 草案。
+- `contracts/03-workstation-channel.md`：云端与工作机连接和执行协议草案。
 
 ### 决策、计划与质量
 
@@ -50,7 +58,9 @@
 - `decisions/0002-cloud-centered-topology.md`：采用云端中枢和可选工作机扩展的决策。
 - `decisions/0003-development-engine-boundary.md`：开发协作引擎与产品运行时分离决策。
 - `plans/0001-v2-documentation-foundation.md`：本轮文档基线落实台账。
+- `plans/0002-v2-design-readiness.md`：领域与模块设计细化台账。
 - `quality/01-documentation-acceptance.md`：当前阶段的文档验收口径。
+- `quality/02-phase-1-design-acceptance.md`：进入第一阶段代码开发前的设计门禁。
 
 ## 状态规则
 

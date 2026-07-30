@@ -215,6 +215,8 @@ $RequiredDirectories = @(
     ".agent-context/memory-sources",
     "docs/product",
     "docs/architecture",
+    "docs/domain",
+    "docs/modules",
     "docs/business",
     "docs/contracts",
     "docs/decisions",
@@ -228,7 +230,22 @@ $RequiredFiles = @(
     ".agent-context/memory-sources/README.md",
     ".gitignore",
     ".gitattributes",
-    "docs/00-index.md"
+    "docs/00-index.md",
+    "docs/domain/00-glossary.md",
+    "docs/domain/01-core-domain-model.md",
+    "docs/modules/mobile-web.md",
+    "docs/modules/identity-access.md",
+    "docs/modules/conversation-runtime.md",
+    "docs/modules/agent-orchestration.md",
+    "docs/modules/task-orchestration.md",
+    "docs/modules/memory-service.md",
+    "docs/modules/workstation-gateway.md",
+    "docs/modules/reminder-notification.md",
+    "docs/business/04-identity-and-device-flow.md",
+    "docs/contracts/02-cloud-public-api.md",
+    "docs/contracts/03-workstation-channel.md",
+    "docs/plans/0002-v2-design-readiness.md",
+    "docs/quality/02-phase-1-design-acceptance.md"
 )
 
 foreach ($Directory in $RequiredDirectories) { Test-RequiredDirectory $Directory }
