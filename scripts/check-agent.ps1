@@ -180,10 +180,18 @@ function Test-MemoryLine {
 }
 
 function Test-MarkdownLinks {
-    $MarkdownFiles = Get-ChildItem -LiteralPath $Root -Recurse -File -Filter "*.md" |
-        Where-Object { $_.FullName -notlike "*\.agent-context\local-index\*" }
+    $MarkdownPaths = @(& git -C $Root ls-files --cached --others --exclude-standard -- "*.md" 2>$null)
+    if ($LASTEXITCODE -ne 0) {
+        Add-Issue "Unable to list project Markdown files with Git"
+        return
+    }
 
-    foreach ($File in $MarkdownFiles) {
+    foreach ($RelativePath in $MarkdownPaths) {
+        $FilePath = Join-Path $Root $RelativePath
+        if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
+            continue
+        }
+        $File = Get-Item -LiteralPath $FilePath
         $Content = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
         $Matches = [regex]::Matches($Content, "\[[^\]]+\]\(([^)]+)\)")
         foreach ($Match in $Matches) {
