@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "project_id": "arcmind-v2",
+  "project_name": "ArcMind V2",
+  "engine": {
+    "name": "Agent Context OS",
+    "mode": "thin-launcher",
+    "version": "b6de397b189a9ce30ac597698228946a08645743",
+    "source": "https://github.com/Crayon-312/agent-context-os.git"
+  },
+  "memory": {
+    "source_paths": [
+      ".agent-context/memory-sources/memory-*.jsonl"
+    ],
+    "local_index": {
+      "provider": "deferred-local-hybrid-index",
+      "path": ".agent-context/local-index",
+      "git_tracked": false
+    }
+  },
+  "quality": {
+    "check_command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-agent.ps1",
+    "validation_commands": [
+      "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-agent.ps1",
+      "git diff --check"
+    ]
+  }
+}

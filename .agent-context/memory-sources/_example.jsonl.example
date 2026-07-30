@@ -1,0 +1,1 @@
+{"id":"mem-YYYYMMDD-001","status":"draft","type":"business_rule","scope":["<模块名>","<业务对象>"],"summary":"<一句话业务记忆摘要>","source":{"kind":"user_confirmed","ref":"<来源路径或说明>","date":"YYYY-MM-DD"},"evidence":["<代码路径或测试路径>"],"confidence":"medium","last_verified":"YYYY-MM-DD","tags":["<标签>"]}

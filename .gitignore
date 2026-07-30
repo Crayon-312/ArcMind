@@ -1,0 +1,33 @@
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Runtime and generated files
+node_modules/
+dist/
+build/
+out/
+.cache/
+.tmp/
+*.log
+
+# Local Agent Context OS index and cache
+.agent-context/local-index/
+.agent-context/index/
+.agent-context/cache/
+.agent-context/*.db
+.agent-context/*.sqlite
+.agent-context/*.sqlite3
+
+# Local Git worktree staging areas
+.worktrees/
+.agent-worktrees/
+.codex-worktrees/
+worktrees/
+
+# Local environment
+.env
+.env.*
+!.env.example
