@@ -36,8 +36,8 @@
 - `architecture/05-agent-runtime.md`：产品运行时主 Agent、语音层和执行器的协作方式。
 - `architecture/06-data-and-memory.md`：会话、记忆、任务和提醒的数据职责。
 - `architecture/07-security-and-deployment.md`：传输、身份、设备、权限和部署边界。
-- `architecture/08-technology-selection.md`：尚未定案的技术选型及决策门禁。
-- `architecture/09-repository-and-deployable-apps.md`：一个仓库、三套应用和共享契约的代码组织提议。
+- `architecture/08-technology-selection.md`：已确认的首阶段技术基线、延期项及后续决策门禁。
+- `architecture/09-repository-and-deployable-apps.md`：一个仓库、三套应用和共享契约的代码组织决策。
 - `architecture/10-three-end-risk-review.md`：三端方案的一致性检查、风险和修正建议。
 
 ### 领域与模块
@@ -60,10 +60,14 @@
 - `decisions/0001-v2-independent-line.md`：V2 与旧版双线并存决策。
 - `decisions/0002-cloud-centered-topology.md`：采用云端中枢和可选工作机扩展的决策。
 - `decisions/0003-development-engine-boundary.md`：开发协作引擎与产品运行时分离决策。
-- `decisions/0004-three-app-monorepo.md`：单仓库三应用的待确认决策。
+- `decisions/0004-three-app-monorepo.md`：单仓库管理三套独立应用的决策。
+- `decisions/0005-cloud-agent-runtime-stack.md`：Python、FastAPI 与 LangGraph 云端运行时决策。
+- `decisions/0006-mobile-web-stack.md`：React、TypeScript 与 Vite 手机 Web 决策。
+- `decisions/0007-engineering-baseline.md`：跨端依赖、契约、测试、部署与工作机技术基线。
 - `plans/0001-v2-documentation-foundation.md`：本轮文档基线落实台账。
 - `plans/0002-v2-design-readiness.md`：领域与模块设计细化台账。
 - `plans/0003-three-app-architecture-review.md`：三端代码组织和开发顺序审查台账。
+- `plans/0004-v2-technology-baseline.md`：首阶段技术选型研究、决策和同步台账。
 - `quality/01-documentation-acceptance.md`：当前阶段的文档验收口径。
 - `quality/02-phase-1-design-acceptance.md`：进入第一阶段代码开发前的设计门禁。
 

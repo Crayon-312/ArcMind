@@ -1,9 +1,9 @@
 # 技术选型与决策门禁
 
-状态：open
+状态：current
 最后校验日期：2026-07-30
 
-当前只确认产品职责和逻辑架构，具体技术栈尚未定案。任何候选进入实现前都要形成独立决策记录，不得因为示例或 Agent 偏好自动成为项目事实。
+本文记录 ArcMind V2 已确认的首阶段技术基线、明确延期的选择以及仍需专项验证的开放问题。具体依赖版本在创建工程骨架时锁定到当时稳定版，不在架构文档中追逐每个补丁版本。
 
 ## 选型原则
 
@@ -14,19 +14,74 @@
 5. 供应商能力必须通过正式文档、仓库更新或实测验证，不能依赖营销摘要。
 6. 任何运行时依赖都要有升级、降级和替换边界。
 
-## 待选领域
+## 已确认技术基线
 
-| 领域 | 必须回答的问题 | 当前状态 |
-|---|---|---|
-| 手机 Web | 框架、PWA、音频采集和实时传输方案 | open |
-| 云端语言与框架 | 并发实时连接、任务编排、生态和运维成本 | open |
-| 数据库 | 事务任务、会话、记忆和检索如何组合 | open |
-| 消息与队列 | 长任务、重试、延时提醒和事件投递 | open |
-| 实时语音 | 音质、打断、延迟、工具协作、价格和国内可用性 | open |
-| 主 Agent | 模型路由、工具调用、上下文窗口和成本 | open |
-| 工作机运行时 | 安装、更新、出站连接、沙箱和执行器接口 | open |
-| 通知 | 页面内消息、Web Push 或其他可用通道 | open |
-| HTTPS | 域名、受管理证书或安全隧道 | open |
+| 领域 | 选择 | 状态 | 决策记录 |
+|---|---|---|---|
+| 仓库 | 单仓库三套独立应用 | accepted | `docs/decisions/0004-three-app-monorepo.md` |
+| 手机 Web | React + TypeScript + Vite + React Router + TanStack Query | accepted | `docs/decisions/0006-mobile-web-stack.md` |
+| 手机样式 | Tailwind CSS + CSS 变量设计令牌 | accepted | `docs/decisions/0006-mobile-web-stack.md` |
+| 云端 API | Python 3.12 + FastAPI + Pydantic + Uvicorn | accepted | `docs/decisions/0005-cloud-agent-runtime-stack.md` |
+| 产品主 Agent | LangGraph；ArcMind 领域服务和数据库保持事实所有权 | accepted | `docs/decisions/0005-cloud-agent-runtime-stack.md` |
+| Python 工程 | uv + Ruff + Pyright + pytest | accepted | `docs/decisions/0007-engineering-baseline.md` |
+| TypeScript 工程 | Node.js LTS + pnpm workspace + ESLint + Vitest | accepted | `docs/decisions/0007-engineering-baseline.md` |
+| 端到端测试 | Playwright，覆盖 Chromium、WebKit 和 Firefox | accepted | `docs/decisions/0007-engineering-baseline.md` |
+| 公开契约 | OpenAPI 3.1 + JSON Schema；生成客户端类型 | accepted | `docs/decisions/0007-engineering-baseline.md` |
+| 本地与 VPS 编排 | Docker Compose | accepted | `docs/decisions/0007-engineering-baseline.md` |
+| 工作机 MVP | Electron + TypeScript + React/Vite 渲染层 | accepted | `docs/decisions/0007-engineering-baseline.md` |
+
+## 现在不选的内容
+
+| 领域 | 状态 | 延期原因 | 决策时点 |
+|---|---|---|---|
+| 主数据库、迁移与检索 | open | 需要先完成领域数据与一致性分析 | 下一轮云端数据设计 |
+| 耐久任务队列与提醒调度 | open | 必须结合任务租约、重试和延时语义选择 | 数据库设计之后 |
+| 实时语音供应商与媒体协议 | open | 必须经过真机音质、打断、延迟和成本测试 | 文字任务闭环稳定后 |
+| 主 Agent 模型供应商 | open | LangGraph 与模型解耦，需结合国内可用性和成本选择 | 文字对话纵向切片前 |
+| 身份实现 | open | 邮箱验证、恢复、撤销和反滥用需专项设计 | 身份纵向切片前 |
+| 可信 HTTPS | open | 需要针对无域名或有域名部署做真机验证 | 身份纵向切片前 |
+| Web Push | open | 首版先使用页面内消息，浏览器推送后置 | 提醒阶段 |
+| PWA | deferred | 不阻塞页面前台通话和任务查看 | 手机闭环稳定后 |
+
+FastAPI 的进程内后台任务不能承担 ArcMind 的耐久任务队列。LangGraph 的 Checkpoint（检查点）也不能替代任务表、审计事件、提醒计划或跨设备业务事实。
+
+## 关键取舍
+
+### 为什么主 Agent 选择 LangGraph
+
+- 官方定位就是长期、有状态 Agent 的低层编排框架，可在同一图中组合确定性步骤和模型步骤。
+- Checkpoint 支持故障恢复和会话级状态，Interrupt（中断）支持等待用户确认后恢复，符合高风险动作审批。
+- 框架不要求由 LangChain 托管模型，可在 ArcMind 适配层后接不同推理供应商。
+- ArcMind 仍自行维护任务、记忆和审计领域；不把 LangGraph Store 当成整个产品数据库。
+
+未选择 OpenAI Agents SDK 作为主骨架：它简单、成熟并支持会话、工具、人工介入和非 OpenAI 模型接入，但默认能力和实时 Agent 更偏 OpenAI 产品路径，不适合作为供应商可替换系统的最外层事实框架。它未来可以作为某个 OpenAI 专用适配器使用。
+
+未选择 Mastra：TypeScript 统一栈很有吸引力，但当前官方文档仍把部分 Durable Agents（耐久 Agent）、Goals（目标）和 Schedules（调度）能力标为 Beta。未选择 CrewAI 和 AutoGen：它们更强调自主多 Agent 团队或分布式 Agent，不符合首版“一个主 Agent + 明确工具与任务事实”的最小复杂度原则。
+
+### 为什么手机 Web 不选择 Next.js
+
+首版没有 SEO（搜索引擎优化）、服务端渲染或 React 服务端组件需求，云端 API 也由 FastAPI 独立提供。React + Vite 生成静态前端，部署、调试和故障边界更简单。若未来出现公开内容页或服务端渲染需求，再单独评估 Next.js，不提前承担双后端心智负担。
+
+### 为什么工作机 MVP 选择 Electron
+
+Electron 可复用 React、TypeScript 和前端工程经验，并能从主进程调用 Codex CLI 等本地程序。代价是安装包较大且安全边界更严格，因此必须打包本地页面、关闭远程内容的 Node.js 集成、启用 Context Isolation（上下文隔离）和 Sandbox（沙箱），并校验所有 IPC（进程间通信）消息。Tauri 体积更小，但会在第一版引入 Rust；.NET 原生方案则引入另一套 UI 和语言生态，当前维护成本更高。
+
+## 官方证据
+
+- [LangGraph overview](https://docs.langchain.com/oss/python/langgraph/overview)
+- [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence)
+- [LangGraph interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts)
+- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)
+- [Mastra documentation](https://mastra.ai/docs)
+- [FastAPI features](https://fastapi.tiangolo.com/features/)
+- [React: Creating a React app](https://react.dev/learn/creating-a-react-app)
+- [Vite guide](https://vite.dev/guide/)
+- [Electron security](https://www.electronjs.org/docs/latest/tutorial/security)
+- [Tauri introduction](https://v2.tauri.app/start/)
+- [pnpm workspace](https://pnpm.io/workspaces)
+- [uv projects](https://docs.astral.sh/uv/concepts/projects/)
+- [Docker Compose](https://docs.docker.com/compose/)
+- [Playwright](https://playwright.dev/docs/intro)
 
 ## 实时语音评测矩阵
 
