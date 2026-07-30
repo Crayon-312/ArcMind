@@ -17,11 +17,12 @@ SQLAlchemy Unit of Work（工作单元）
 PostgreSQL 18
   ├─ ArcMind 领域表
   ├─ Outbox / Inbox 与幂等记录
+  ├─ Procrastinate 组件自有 Job 表
   ├─ pgvector 可重建索引
   └─ LangGraph 框架专属 Checkpoint 表
 ```
 
-LangGraph 表只能由 Agent Runtime 适配器访问；领域查询不得读取 Checkpoint 推断任务是否完成。
+LangGraph 表只能由 Agent Runtime 适配器访问，Procrastinate 表只能由 `JobQueue` 适配器访问；领域查询不得读取这两类组件表推断任务、提醒或执行是否完成。
 
 ## 表组与所有权
 
@@ -38,6 +39,8 @@ LangGraph 表只能由 Agent Runtime 适配器访问；领域查询不得读取 
 | 提醒 | `reminders`、`reminder_occurrences` | 提醒阶段 | 每次触发使用独立实例和幂等键 |
 | 通知 | `notifications`、`notification_deliveries` | 提醒阶段 | 生成消息与投递成功是两个事实 |
 | 集成 | `outbox_events`、`inbox_receipts`、`idempotency_records`、`provider_mappings` | 第一阶段 | 支持跨模块事件、外部回调和供应商替换 |
+
+Procrastinate 自有表不纳入 ArcMind 领域表命名和 Repository 约定。其 Schema（数据库结构）初始化与升级由队列适配器和发布流程管理，业务迁移不得直接改写组件内部表。
 
 第一阶段只创建实际纵向切片需要的表，不一次性建立所有未来表；但命名、所有权和关系必须遵循本基线。
 
@@ -77,6 +80,16 @@ LangGraph 表只能由 Agent Runtime 适配器访问；领域查询不得读取 
 - 任务表保存当前快照，事件表用于审计和重建诊断；首版不实施完整 Event Sourcing（事件溯源）。
 - 终态更新使用版本条件，迟到事件只能被记录为已忽略，不能恢复任务运行。
 - Outbox 投递采用至少一次语义，因此所有消费者必须幂等。
+- Outbox Dispatcher 在短事务中用 `FOR UPDATE SKIP LOCKED` 领取记录，事务外入队；“已入队、未标记”崩溃窗口允许重复 Job，由消费者幂等吸收。
+- 队列 Job 成功不更新用户任务终态；必须由对应领域服务校验执行事实和验收结果。
+
+## Job 与提醒持久化边界
+
+- Procrastinate 保存内部 Job 的领取、锁、重试和短期调度状态，不保存用户可见任务计划。
+- 每条 Job 载荷包含稳定 `job_key`、关联 ID、预期版本和 Schema 版本，不复制大段会话或任务正文。
+- `ExecutionLease` 保存云端工具或工作机执行权，不能用 Procrastinate Worker 锁替代。
+- `reminders.next_trigger_at` 保存下一次业务触发时间；Reminder Scheduler 短周期扫描并以 `(reminder_id, scheduled_for)` 唯一创建实例。
+- 工作机长任务接收后结束派发 Job，后续进度由幂等工作机事件和 Reconciler 协调。
 
 ## 记忆与检索
 
@@ -126,5 +139,4 @@ PostgreSQL 内建全文检索对中文分词效果必须实测；未通过固定
 
 - 对话正文、任务、日志和长期记忆的默认保留期。
 - S3 兼容对象存储的具体产品和加密方式。
-- 耐久队列、Outbox 投递器和提醒调度器的具体实现。
 - LangGraph PostgreSQL Checkpoint 表的初始化、迁移与清理策略，需要技术验证。

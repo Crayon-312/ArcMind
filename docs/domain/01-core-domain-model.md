@@ -10,7 +10,7 @@
 | 身份 | `User` | `UserSession`、`DeviceBinding`、偏好 | 身份与访问模块 |
 | 对话 | `Conversation` | `Turn`、`ConversationSummary`、供应商会话映射 | 会话模块 |
 | 记忆 | `Memory` | 来源、版本、状态、可见范围 | 记忆模块 |
-| 任务 | `Task` | `TaskPlan`、`TaskStep`、`Approval`、`Execution`、`ArtifactRef` | 任务编排模块 |
+| 任务 | `Task` | `TaskPlan`、`TaskStep`、`Approval`、`Execution`、`ExecutionLease`、`ArtifactRef` | 任务编排模块 |
 | 工作机 | `Workstation` | `WorkstationConnection`、`Capability`、执行租约 | 工作机网关 |
 | 提醒 | `Reminder` | `ReminderOccurrence`、调度规则 | 提醒模块 |
 | 消息 | `Notification` | 投递尝试、已读状态、目标引用 | 通知模块 |
@@ -25,7 +25,8 @@ User
  ├─ 0..* Memory
  ├─ 0..* Task ── 1 TaskPlan ── 1..* TaskStep
  │               ├─ 0..* Approval
- │               ├─ 0..* Execution ── 0..* ArtifactRef
+ │               ├─ 0..* Execution ── 0..1 ExecutionLease
+ │               │                 └─ 0..* ArtifactRef
  │               └─ 0..* TaskEvent
  ├─ 0..* Workstation ── 0..* Capability
  ├─ 0..* Reminder ── 0..* ReminderOccurrence
@@ -43,6 +44,7 @@ User
 | `Task` | `id`、`user_id`、`title`、`goal`、`state`、`plan_version`、`created_at` | 状态只由编排器改变 |
 | `TaskStep` | `id`、`task_id`、`kind`、`dependencies`、`state`、`acceptance` | 步骤 ID 在同一计划版本稳定 |
 | `Execution` | `id`、`step_id`、`target_type`、`target_id`、`attempt`、`state`、`lease_version` | 区分每次真实执行 |
+| `ExecutionLease` | `id`、`execution_id`、`target_id`、`version`、`expires_at`、`state` | 与队列 Worker 内部锁分离 |
 | `Approval` | `id`、`task_id`、`action`、`scope`、`state`、`expires_at` | 只批准具体动作 |
 | `Workstation` | `id`、`user_id`、`display_name`、`status`、`last_seen_at` | 在线状态与绑定状态分离 |
 | `Capability` | `id`、`workstation_id`、`type`、`version`、`constraints` | 云端只能派发已声明能力 |
@@ -59,6 +61,7 @@ User
 6. 长期记忆必须包含来源和状态；无法验证的内容不能标为高可信当前事实。
 7. 审批过期、被拒绝或动作范围变化后不得继续使用。
 8. 提醒触发与通知投递是两个事实，任何一方失败都不能伪造另一方成功。
+9. 内部 Job 不是领域聚合，Job 结果只能通过领域服务推动任务或提醒状态。
 
 ## 数据标识规则
 

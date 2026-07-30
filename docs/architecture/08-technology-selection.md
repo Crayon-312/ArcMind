@@ -32,12 +32,12 @@
 | 主数据库 | PostgreSQL 18 | accepted | `docs/decisions/0008-primary-data-stack.md` |
 | 数据访问与迁移 | SQLAlchemy 2.0 + psycopg 3 + Alembic | accepted | `docs/decisions/0008-primary-data-stack.md` |
 | 记忆向量索引 | 同库 pgvector，可重建且延迟启用 | accepted | `docs/decisions/0008-primary-data-stack.md` |
+| 耐久 Job 与提醒调度 | Procrastinate + PostgreSQL；领域提醒由数据库扫描生成触发实例 | accepted | `docs/decisions/0009-durable-job-stack.md` |
 
 ## 现在不选的内容
 
 | 领域 | 状态 | 延期原因 | 决策时点 |
 |---|---|---|---|
-| 耐久任务队列与提醒调度 | open | 必须结合任务租约、重试和延时语义选择 | 数据库设计之后 |
 | 实时语音供应商与媒体协议 | open | 必须经过真机音质、打断、延迟和成本测试 | 文字任务闭环稳定后 |
 | 主 Agent 模型供应商 | open | LangGraph 与模型解耦，需结合国内可用性和成本选择 | 文字对话纵向切片前 |
 | 身份实现 | open | 邮箱验证、恢复、撤销和反滥用需专项设计 | 身份纵向切片前 |
@@ -46,6 +46,8 @@
 | PWA | deferred | 不阻塞页面前台通话和任务查看 | 手机闭环稳定后 |
 
 FastAPI 的进程内后台任务不能承担 ArcMind 的耐久任务队列。LangGraph 的 Checkpoint（检查点）也不能替代任务表、审计事件、提醒计划或跨设备业务事实。
+
+首版使用 Procrastinate 处理内部短 Job（后台作业）、重试和投递，复用 PostgreSQL 而不增加 Redis 或 RabbitMQ。用户 `Task`、工作机 `ExecutionLease` 和 `Reminder` 仍由领域服务维护；远期提醒由数据库扫描生成唯一 `ReminderOccurrence`，不依赖长期队列 ETA。
 
 PostgreSQL 是唯一主事实库；JSONB（JSON 二进制类型）只保存结构可变的内容片段、约束和供应商元数据，稳定的身份、状态、时间、所有权和关联必须使用普通列与外键。pgvector 只保存可重建的语义检索索引，不成为长期记忆事实源。
 
@@ -90,6 +92,11 @@ Electron 可复用 React、TypeScript 和前端工程经验，并能从主进程
 - [SQLAlchemy asyncio](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html)
 - [Alembic](https://alembic.sqlalchemy.org/en/latest/tutorial.html)
 - [pgvector](https://github.com/pgvector/pgvector)
+- [Procrastinate documentation](https://procrastinate.readthedocs.io/en/stable/)
+- [Celery introduction](https://docs.celeryq.dev/en/stable/getting-started/introduction.html)
+- [Taskiq getting started](https://taskiq-python.github.io/guide/getting-started.html)
+- [Temporal Python SDK](https://docs.temporal.io/develop/python)
+- [PostgreSQL locking clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE)
 
 ## 实时语音评测矩阵
 
