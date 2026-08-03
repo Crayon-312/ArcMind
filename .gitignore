@@ -28,6 +28,14 @@ release/
 .codex-worktrees/
 worktrees/
 
+# Local Obsidian UI state and optional downloaded extensions
+docs/.obsidian/workspace*.json
+docs/.obsidian/community-plugins.json
+docs/.obsidian/plugins/
+docs/.obsidian/themes/
+docs/.obsidian/snippets/
+docs/.trash/
+
 # Local environment
 .env
 .env.*

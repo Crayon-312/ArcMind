@@ -20,9 +20,12 @@ ArcMind V2 是一个以实时语音为主要入口、以云端任务中枢为核
 ## 文档入口
 
 - 开发协作入口：[AGENTS.md](AGENTS.md)
+- Obsidian 知识库首页：[docs/README.md](docs/README.md)
 - 项目文档索引：[docs/00-index.md](docs/00-index.md)
 - 项目上下文配置：[.agent-context/config.json](.agent-context/config.json)
 - 项目记忆源：[.agent-context/memory-sources/README.md](.agent-context/memory-sources/README.md)
+
+本机使用 Obsidian 时直接将 `D:\ArcMind\docs` 作为 Vault（知识库目录）打开。仓库只保存 Markdown、附件和少量共享配置，不包含 Obsidian 应用本体、个人窗口状态、社区插件或主题文件。
 
 ## 分支策略
 

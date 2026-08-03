@@ -1,9 +1,19 @@
 # ArcMind V2 项目文档索引
 
 状态：current
-最后校验日期：2026-07-30
+最后校验日期：2026-08-03
 
 本目录描述 ArcMind V2 的产品事实、业务流程、系统边界、公开契约和阶段计划。Agent Context OS（智能协作上下文操作系统）的完整开发规则不复制到这里；开发工具从 `AGENTS.md` 和 `.agent-context/config.json` 加载外部引擎。
+
+## Obsidian 入口与任务隔离
+
+- `README.md`：Obsidian 知识库首页和目录说明。
+- `plans/`：每个任务一个方案落实台账，也是隔离讨论、批准方案和执行记录的任务舱。
+- `templates/task-capsule.md`：新任务舱模板。
+- `assets/`：文档附件目录；仅提交项目需要且适合版本控制的附件。
+- `.obsidian/app.json`：团队共享的最小 Obsidian 配置；个人窗口、插件和主题状态不进入 Git。
+
+任务舱不等于产品运行时的 `Task`。讨论阶段只改状态为 `draft` 的任务舱；用户确认后按有序清单实施，验证通过后再把代码与正式文档一起发布为当前事实。
 
 ## 必读顺序
 
@@ -68,12 +78,14 @@
 - `decisions/0007-engineering-baseline.md`：跨端依赖、契约、测试、部署与工作机技术基线。
 - `decisions/0008-primary-data-stack.md`：PostgreSQL、SQLAlchemy、Alembic 与 pgvector 数据栈决策。
 - `decisions/0009-durable-job-stack.md`：Procrastinate、PostgreSQL 与提醒扫描的耐久后台工作决策。
+- `decisions/0010-obsidian-task-publication.md`：Obsidian 知识库、任务隔离和文档发布闭环决策。
 - `plans/0001-v2-documentation-foundation.md`：本轮文档基线落实台账。
 - `plans/0002-v2-design-readiness.md`：领域与模块设计细化台账。
 - `plans/0003-three-app-architecture-review.md`：三端代码组织和开发顺序审查台账。
 - `plans/0004-v2-technology-baseline.md`：首阶段技术选型研究、决策和同步台账。
 - `plans/0005-cloud-data-foundation.md`：云端数据、事务、迁移、检索和备份设计台账。
 - `plans/0006-durable-jobs-and-scheduling.md`：耐久 Job、重试、恢复和提醒调度设计台账。
+- `plans/0007-obsidian-task-isolation.md`：Obsidian 知识库与任务隔离流程落实台账。
 - `quality/01-documentation-acceptance.md`：当前阶段的文档验收口径。
 - `quality/02-phase-1-design-acceptance.md`：进入第一阶段代码开发前的设计门禁。
 
