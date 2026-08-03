@@ -3,6 +3,14 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[业务内容地图](00-business-map.md)
+- 产品需求：[产品范围与需求](../product/02-scope-and-requirements.md)
+- 责任模块：[提醒与通知模块](../modules/reminder-notification.md)
+- 调度机制：[耐久 Job、调度与恢复设计](../architecture/12-durable-jobs-and-scheduling.md)
+- 事件契约：[跨端事件契约基线](../contracts/01-cross-end-events.md)
+
 ## 目标
 
 提醒用于在指定时间触发用户预先安排的事项；通知用于告知任务完成、失败、阻塞或需要确认。两者都由云端维护，因此不依赖手机页面或工作机持续在线。

@@ -3,6 +3,13 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[产品内容地图](00-product-map.md)
+- 上游路线：[V2 交付路线](04-delivery-roadmap.md)
+- 工程组织：[代码仓库与三套可部署应用](../architecture/09-repository-and-deployable-apps.md)
+- 设计门禁：[第一阶段设计就绪验收](../quality/02-phase-1-design-acceptance.md)
+
 ## 已确认顺序
 
 应先搭建云端后端的最小基础，再开始手机 Web；但不能把“云端优先”理解为“后端全部完成后再做前端”。推荐按纵向切片逐步形成可运行闭环。
@@ -42,7 +49,7 @@
 - 确认本地与 VPS 的可信 HTTPS 方案。
 - 将公开 API 和事件草案转换成机器可校验 Schema。
 
-验收：`docs/quality/02-phase-1-design-acceptance.md` 中 DR-001 至 DR-006 有明确结论。
+验收：[第一阶段设计就绪验收](../quality/02-phase-1-design-acceptance.md)中的 DR-001 至 DR-006 有明确结论。
 
 ## 第 1 步：三应用工程骨架
 

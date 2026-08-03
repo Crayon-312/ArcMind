@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 产品起点：[产品背景与愿景](../product/01-background-and-vision.md)
+- 开发路线：[V2 交付路线](../product/04-delivery-roadmap.md)
+- 落实台账：[ArcMind V2 文档基线](../plans/0001-v2-documentation-foundation.md)
+
 ## 背景
 
 ArcMind 的产品方向已发生整体变化。继续在旧版代码和旧版协作文档上重构会把已废弃假设带入新系统，也难以判断哪些事实仍有效。

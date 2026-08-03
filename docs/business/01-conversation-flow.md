@@ -3,6 +3,13 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[业务内容地图](00-business-map.md)
+- 用户场景：[用户与关键场景](../product/03-users-and-scenarios.md)
+- 协作模块：[会话与实时交互](../modules/conversation-runtime.md)、[主 Agent Runtime](../modules/agent-orchestration.md)、[任务编排](../modules/task-orchestration.md)
+- 跨端契约：[跨端事件契约基线](../contracts/01-cross-end-events.md)、[云端公开 API 契约草案](../contracts/02-cloud-public-api.md)
+
 ## 主流程
 
 | 步骤 | 用户动作 | 系统行为 | 输出 |

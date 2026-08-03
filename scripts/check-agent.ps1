@@ -211,6 +211,97 @@ function Test-MarkdownLinks {
     }
 }
 
+function Get-InternalMarkdownTargets {
+    param([string]$FilePath)
+
+    $Targets = New-Object System.Collections.Generic.List[string]
+    $File = Get-Item -LiteralPath $FilePath
+    $Content = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
+    $Matches = [regex]::Matches($Content, "\[[^\]]+\]\(([^)]+)\)")
+    foreach ($Match in $Matches) {
+        $Target = $Match.Groups[1].Value.Trim()
+        if ($Target -match "^(https?://|#|mailto:)") {
+            continue
+        }
+        $TargetPath = ($Target -split "#", 2)[0]
+        if ([string]::IsNullOrWhiteSpace($TargetPath)) {
+            continue
+        }
+        $Resolved = [System.IO.Path]::GetFullPath((Join-Path $File.DirectoryName $TargetPath))
+        if ([System.IO.Path]::GetExtension($Resolved) -eq ".md") {
+            $Targets.Add($Resolved) | Out-Null
+        }
+    }
+    return $Targets.ToArray()
+}
+
+function Test-KnowledgeGraph {
+    $DocsRoot = Join-Path $Root "docs"
+    if (-not (Test-Path -LiteralPath $DocsRoot -PathType Container)) {
+        return
+    }
+
+    $MarkdownFiles = @(Get-ChildItem -LiteralPath $DocsRoot -Recurse -File -Filter "*.md")
+    $KnownPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $Degrees = @{}
+    foreach ($File in $MarkdownFiles) {
+        $KnownPaths.Add($File.FullName) | Out-Null
+        $Degrees[$File.FullName] = 0
+    }
+
+    foreach ($File in $MarkdownFiles) {
+        foreach ($Target in @(Get-InternalMarkdownTargets $File.FullName)) {
+            if ($KnownPaths.Contains($Target)) {
+                $Degrees[$File.FullName]++
+                $Degrees[$Target]++
+            }
+        }
+    }
+
+    foreach ($File in $MarkdownFiles) {
+        $Content = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
+        $IsPublishedKnowledge = [regex]::IsMatch($Content, '(?m)^\u72b6\u6001\uff1a(current|accepted)\s*$')
+        $LinkDegree = [int]$Degrees[$File.FullName]
+        if ($IsPublishedKnowledge -and $LinkDegree -eq 0) {
+            Add-Issue "Current knowledge document is isolated: $($File.FullName.Substring($Root.Length + 1))"
+        }
+    }
+
+    $KnowledgeDomains = [ordered]@{
+        "product" = "00-product-map.md"
+        "domain" = "00-domain-map.md"
+        "architecture" = "00-architecture-map.md"
+        "modules" = "00-modules-map.md"
+        "business" = "00-business-map.md"
+        "contracts" = "00-contracts-map.md"
+        "decisions" = "00-decisions-map.md"
+        "plans" = "00-plans-map.md"
+        "quality" = "00-quality-map.md"
+    }
+    foreach ($Entry in $KnowledgeDomains.GetEnumerator()) {
+        $Domain = $Entry.Key
+        $DomainRoot = Join-Path $DocsRoot $Domain
+        $IndexPath = Join-Path $DomainRoot $Entry.Value
+        if (-not (Test-Path -LiteralPath $IndexPath -PathType Leaf)) {
+            Add-Issue "Knowledge domain is missing content map: docs/$Domain/$($Entry.Value)"
+            continue
+        }
+
+        $MappedPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($Target in @(Get-InternalMarkdownTargets $IndexPath)) {
+            $MappedPaths.Add($Target) | Out-Null
+        }
+        foreach ($File in @(Get-ChildItem -LiteralPath $DomainRoot -File -Filter "*.md")) {
+            if ($File.Name -eq $Entry.Value) {
+                continue
+            }
+            if (-not $MappedPaths.Contains($File.FullName)) {
+                Add-Issue "Knowledge document is not listed by its domain map: $($File.FullName.Substring($Root.Length + 1))"
+            }
+        }
+    }
+}
+
 try {
     $Root = (Resolve-Path -LiteralPath $ProjectRoot).Path
 }
@@ -345,6 +436,7 @@ if ($Config) {
 }
 
 Test-MarkdownLinks
+Test-KnowledgeGraph
 
 if ($Issues.Count -gt 0) {
     Write-Host "Agent project check failed:" -ForegroundColor Red

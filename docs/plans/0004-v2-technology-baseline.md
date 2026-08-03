@@ -3,6 +3,13 @@
 状态：done
 最后更新：2026-07-30
 
+## 关系导航
+
+- 所属领域：[计划内容地图](00-plans-map.md)
+- 选型入口：[技术选型与决策门禁](../architecture/08-technology-selection.md)
+- 发布决策：[云端与产品主 Agent 技术栈](../decisions/0005-cloud-agent-runtime-stack.md)、[手机 Web 技术栈](../decisions/0006-mobile-web-stack.md)、[跨端工程与工作机基线](../decisions/0007-engineering-baseline.md)
+- 验收标准：[第一阶段设计就绪验收](../quality/02-phase-1-design-acceptance.md)
+
 ## 目标
 
 基于 ArcMind V2 三端边界和第一阶段闭环，核对官方资料，确定会影响工程骨架的技术栈，并把数据库、队列、身份、HTTPS 和实时语音等需要专项分析的选择保留到正确阶段。
@@ -34,13 +41,13 @@
 
 | 影响类型 | 内容 | 状态 | 写回位置 |
 |---|---|---|---|
-| 架构 | 确定云端、主 Agent、手机和工作机运行时 | current | `docs/architecture/08-technology-selection.md` |
-| 仓库 | 单仓库三应用从提议转为正式决策 | current | `docs/decisions/0004-three-app-monorepo.md` |
-| 接口 | 确定 OpenAPI 3.1 与 JSON Schema 契约源 | current | `docs/decisions/0007-engineering-baseline.md` |
-| 数据 | 明确框架运行态不得替代领域事实 | current | `docs/decisions/0005-cloud-agent-runtime-stack.md` |
-| 安全 | 增加 Electron 隔离、IPC 校验和本地页面要求 | current | `docs/decisions/0007-engineering-baseline.md` |
-| 测试 | 确定 pytest、Vitest 和 Playwright 分层 | current | `docs/decisions/0006-mobile-web-stack.md`、`0007-engineering-baseline.md` |
-| 发布 | 确定 Docker Compose 单 VPS 基线 | current | `docs/decisions/0007-engineering-baseline.md` |
+| 架构 | 确定云端、主 Agent、手机和工作机运行时 | current | [技术选型与决策门禁](../architecture/08-technology-selection.md) |
+| 仓库 | 单仓库三应用从提议转为正式决策 | current | [决策 0004](../decisions/0004-three-app-monorepo.md) |
+| 接口 | 确定 OpenAPI 3.1 与 JSON Schema 契约源 | current | [决策 0007](../decisions/0007-engineering-baseline.md) |
+| 数据 | 明确框架运行态不得替代领域事实 | current | [决策 0005](../decisions/0005-cloud-agent-runtime-stack.md) |
+| 安全 | 增加 Electron 隔离、IPC 校验和本地页面要求 | current | [决策 0007](../decisions/0007-engineering-baseline.md) |
+| 测试 | 确定 pytest、Vitest 和 Playwright 分层 | current | [决策 0006](../decisions/0006-mobile-web-stack.md)、[决策 0007](../decisions/0007-engineering-baseline.md) |
+| 发布 | 确定 Docker Compose 单 VPS 基线 | current | [决策 0007](../decisions/0007-engineering-baseline.md) |
 | 记忆 | 技术栈与开发顺序写回，关闭宽泛开放问题 | current | `.agent-context/memory-sources/` |
 
 ## 任务清单

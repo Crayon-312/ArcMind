@@ -3,6 +3,13 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[模块内容地图](00-modules-map.md)
+- 调度架构：[耐久 Job、调度与恢复设计](../architecture/12-durable-jobs-and-scheduling.md)
+- 业务流程：[提醒与通知](../business/03-reminder-and-notification.md)
+- 事件契约：[跨端事件契约基线](../contracts/01-cross-end-events.md)
+
 ## 职责
 
 管理提醒计划、触发实例、通知消息、投递尝试、读取状态和用户通知偏好。

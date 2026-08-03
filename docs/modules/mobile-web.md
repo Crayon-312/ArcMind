@@ -3,6 +3,13 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[模块内容地图](00-modules-map.md)
+- 架构边界：[手机 Web 端](../architecture/02-mobile-web.md)
+- 参与流程：[实时对话与任务形成](../business/01-conversation-flow.md)、[身份与工作机绑定](../business/04-identity-and-device-flow.md)
+- 公开契约：[云端公开 API 契约草案](../contracts/02-cloud-public-api.md)
+
 ## 职责
 
 提供身份入口、文字与实时语音交互、任务确认、进度、审批、消息和设置界面。

@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 工程组织：[代码仓库与三套可部署应用](../architecture/09-repository-and-deployable-apps.md)
+- 安全与执行：[安全与部署边界](../architecture/07-security-and-deployment.md)、[工作机端](../architecture/04-workstation-client.md)
+- 落实台账：[V2 首阶段技术基线](../plans/0004-v2-technology-baseline.md)
+
 ## 决策
 
 ### 依赖与仓库

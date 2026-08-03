@@ -3,6 +3,13 @@
 状态：done
 最后更新：2026-07-30
 
+## 关系导航
+
+- 所属领域：[计划内容地图](00-plans-map.md)
+- 发布决策：[V2 作为独立长期开发线](../decisions/0001-v2-independent-line.md)
+- 发布知识：[产品内容地图](../product/00-product-map.md)、[架构内容地图](../architecture/00-architecture-map.md)
+- 验收标准：[V2 文档基线验收](../quality/01-documentation-acceptance.md)
+
 ## 目标
 
 在独立 `v2` 分支从零建立基于 Agent Context OS 极薄启动器的开发协作入口，并将已确认的 V2 产品方向拆成可审查的产品、架构、业务、契约、决策和质量文档。

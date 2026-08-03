@@ -3,6 +3,13 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[模块内容地图](00-modules-map.md)
+- 后台架构：[耐久 Job、调度与恢复设计](../architecture/12-durable-jobs-and-scheduling.md)
+- 业务状态：[任务生命周期](../business/02-task-lifecycle.md)
+- 跨端契约：[跨端事件契约基线](../contracts/01-cross-end-events.md)、[云端与工作机通道契约草案](../contracts/03-workstation-channel.md)
+
 ## 职责
 
 维护任务、计划版本、步骤依赖、执行尝试、租约、审批、重试、取消、状态事件和结果验收。

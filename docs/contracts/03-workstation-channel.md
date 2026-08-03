@@ -3,6 +3,14 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[契约内容地图](00-contracts-map.md)
+- 端侧边界：[工作机端](../architecture/04-workstation-client.md)
+- 责任模块：[工作机网关](../modules/workstation-gateway.md)、[任务编排](../modules/task-orchestration.md)
+- 业务来源：[任务生命周期](../business/02-task-lifecycle.md)、[身份与工作机绑定](../business/04-identity-and-device-flow.md)
+- 事件语义：[跨端事件契约基线](01-cross-end-events.md)
+
 ## 目标
 
 工作机通过主动出站的持久连接接入云端。本契约定义连接阶段、能力注册、任务租约和结果事件的稳定语义，不锁定具体网络库。

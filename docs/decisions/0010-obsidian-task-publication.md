@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-08-03
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 知识库入口：[ArcMind V2 知识库](../README.md)
+- 后续细化：[知识关系分层模型](0011-knowledge-relationship-model.md)
+- 落实台账：[Obsidian 知识库与任务隔离](../plans/0007-obsidian-task-isolation.md)
+
 ## 背景
 
 ArcMind V2 需要把项目知识与业务代码清晰分层，同时让人类和 Agent（智能协作助手）都能检索 Markdown 文档。直接允许 Agent 在分析或方案讨论阶段修改正式文档，会把未确认推断错误发布为项目事实；为所有任务机械创建 Git worktree（Git 独立工作树）又会增加目录、分支和清理成本。

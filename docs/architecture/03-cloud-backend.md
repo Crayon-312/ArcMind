@@ -3,6 +3,15 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 上级架构：[系统上下文与总体边界](01-system-context.md)
+- 核心模块：[主 Agent Runtime](../modules/agent-orchestration.md)、[任务编排](../modules/task-orchestration.md)、[记忆服务](../modules/memory-service.md)
+- 业务流程：[任务生命周期](../business/02-task-lifecycle.md)、[提醒与通知](../business/03-reminder-and-notification.md)
+- 数据与后台工作：[数据存储、事务与检索设计](11-data-storage-and-transactions.md)、[耐久 Job、调度与恢复设计](12-durable-jobs-and-scheduling.md)
+- 技术决策：[云端与产品主 Agent 技术栈](../decisions/0005-cloud-agent-runtime-stack.md)
+
 ## 定位
 
 云端后端是 ArcMind V2 的连续业务中枢。它不是单纯的手机与工作机转发代理，而是维护身份、对话上下文、长期记忆、任务状态、提醒和设备连接的唯一协调层。

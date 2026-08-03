@@ -3,6 +3,13 @@
 状态：done
 最后更新：2026-07-30
 
+## 关系导航
+
+- 所属领域：[计划内容地图](00-plans-map.md)
+- 发布决策：[耐久 Job 与提醒调度技术栈](../decisions/0009-durable-job-stack.md)
+- 发布架构：[耐久 Job、调度与恢复设计](../architecture/12-durable-jobs-and-scheduling.md)
+- 业务同步：[任务生命周期](../business/02-task-lifecycle.md)、[提醒与通知](../business/03-reminder-and-notification.md)
+
 ## 目标
 
 在创建云端代码骨架前，确定内部后台工作的队列技术、状态语义、重试和恢复策略，并明确用户任务、工作机执行租约和提醒调度不由队列状态替代。
@@ -18,12 +25,12 @@
 
 | 影响类型 | 内容 | 状态 | 写回位置 |
 |---|---|---|---|
-| 架构 | 采用 Procrastinate + PostgreSQL，并建立 `JobQueue` 适配边界 | current | `docs/decisions/0009-durable-job-stack.md` |
-| 业务 | `Task`、`Execution`、`Job` 与 `ReminderOccurrence` 状态分离 | current | `docs/architecture/12-durable-jobs-and-scheduling.md` |
-| 数据 | 队列组件运行数据不成为用户业务事实；Outbox/Inbox 继续承担至少一次与幂等 | current | `docs/architecture/11-data-storage-and-transactions.md` |
-| 工作机 | 长任务派发后不长期占用云端 Worker，依靠执行租约和事件协调 | current | `docs/business/02-task-lifecycle.md` |
-| 提醒 | 持久化规则由短周期扫描生成唯一触发实例 | current | `docs/business/03-reminder-and-notification.md` |
-| 运维 | API、Worker、Dispatcher、Scheduler 和 Reconciler 独立运行与恢复 | current | `docs/architecture/03-cloud-backend.md` |
+| 架构 | 采用 Procrastinate + PostgreSQL，并建立 `JobQueue` 适配边界 | current | [决策 0009](../decisions/0009-durable-job-stack.md) |
+| 业务 | `Task`、`Execution`、`Job` 与 `ReminderOccurrence` 状态分离 | current | [耐久 Job、调度与恢复设计](../architecture/12-durable-jobs-and-scheduling.md) |
+| 数据 | 队列组件运行数据不成为用户业务事实；Outbox/Inbox 继续承担至少一次与幂等 | current | [数据存储、事务与检索设计](../architecture/11-data-storage-and-transactions.md) |
+| 工作机 | 长任务派发后不长期占用云端 Worker，依靠执行租约和事件协调 | current | [任务生命周期](../business/02-task-lifecycle.md) |
+| 提醒 | 持久化规则由短周期扫描生成唯一触发实例 | current | [提醒与通知](../business/03-reminder-and-notification.md) |
+| 运维 | API、Worker、Dispatcher、Scheduler 和 Reconciler 独立运行与恢复 | current | [云端后端](../architecture/03-cloud-backend.md) |
 | 记忆 | 关闭队列开放问题并保留 LangGraph Checkpoint 专项 | mixed | `.agent-context/memory-sources/` |
 
 ## 任务清单

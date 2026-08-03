@@ -3,6 +3,13 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 审查对象：[手机 Web 端](02-mobile-web.md)、[云端后端](03-cloud-backend.md)、[工作机端](04-workstation-client.md)
+- 审查台账：[三端代码组织与实施顺序审查](../plans/0003-three-app-architecture-review.md)
+- 后续门禁：[第一阶段设计就绪验收](../quality/02-phase-1-design-acceptance.md)
+
 ## 审查结论
 
 手机 Web、云端后端和可选工作机客户端的总体方向成立，职责划分没有根本冲突。仓库组织、首阶段运行时、数据库和耐久 Job 技术栈已经定案；当前阻塞重点收敛为身份、HTTPS、实时事件、模型接入和可执行契约。

@@ -3,6 +3,13 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[模块内容地图](00-modules-map.md)
+- 安全边界：[安全与部署边界](../architecture/07-security-and-deployment.md)
+- 业务流程：[身份与工作机绑定](../business/04-identity-and-device-flow.md)
+- 公开契约：[云端公开 API 契约草案](../contracts/02-cloud-public-api.md)
+
 ## 职责
 
 管理邮箱注册入口、登录与退出、Web 会话、身份恢复、设备绑定关系和访问控制。

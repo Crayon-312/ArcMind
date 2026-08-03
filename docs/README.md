@@ -8,12 +8,19 @@
 ## 从这里开始
 
 - [项目文档总索引](00-index.md)
-- [产品背景与愿景](product/01-background-and-vision.md)
-- [范围与需求](product/02-scope-and-requirements.md)
-- [系统上下文](architecture/01-system-context.md)
-- [领域术语](domain/00-glossary.md)
-- [本次任务舱](plans/0007-obsidian-task-isolation.md)
+- [产品内容地图](product/00-product-map.md)
+- [领域内容地图](domain/00-domain-map.md)
+- [架构内容地图](architecture/00-architecture-map.md)
+- [模块内容地图](modules/00-modules-map.md)
+- [业务内容地图](business/00-business-map.md)
+- [契约内容地图](contracts/00-contracts-map.md)
+- [决策内容地图](decisions/00-decisions-map.md)
+- [计划内容地图](plans/00-plans-map.md)
+- [质量内容地图](quality/00-quality-map.md)
+- [本次任务舱](plans/0008-knowledge-relationship-reconstruction.md)
 - [任务舱模板](templates/task-capsule.md)
+
+关系图应呈现“总索引—领域内容地图—领域文档—跨领域语义关系”四层结构。目录只负责分类，Markdown 链接负责表达依据、细化、实现、约束、发布和验收关系。
 
 ## 文档分层
 

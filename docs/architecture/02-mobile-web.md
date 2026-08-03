@@ -3,6 +3,15 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 上级架构：[系统上下文与总体边界](01-system-context.md)
+- 模块落点：[手机 Web 模块](../modules/mobile-web.md)
+- 核心流程：[实时对话与任务形成](../business/01-conversation-flow.md)、[身份与工作机绑定](../business/04-identity-and-device-flow.md)
+- 公开契约：[云端公开 API 契约草案](../contracts/02-cloud-public-api.md)
+- 技术决策：[手机 Web 技术栈](../decisions/0006-mobile-web-stack.md)
+
 ## 职责
 
 - 提供注册、登录、退出和会话恢复界面。

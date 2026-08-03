@@ -3,6 +3,14 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 上级架构：[系统上下文与总体边界](01-system-context.md)
+- 模块落点：[主 Agent Runtime](../modules/agent-orchestration.md)、[会话与实时交互](../modules/conversation-runtime.md)、[任务编排](../modules/task-orchestration.md)
+- 核心流程：[实时对话与任务形成](../business/01-conversation-flow.md)
+- 技术决策：[云端与产品主 Agent 技术栈](../decisions/0005-cloud-agent-runtime-stack.md)
+
 ## 名称边界
 
 本文的 Agent Runtime（智能协作助手运行时）属于 ArcMind 产品。它与用于开发仓库的 Agent Context OS 没有运行时依赖关系。

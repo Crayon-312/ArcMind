@@ -3,6 +3,15 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 上级架构：[系统上下文与总体边界](01-system-context.md)
+- 模块落点：[工作机网关模块](../modules/workstation-gateway.md)
+- 身份流程：[身份与工作机绑定](../business/04-identity-and-device-flow.md)
+- 公开契约：[云端与工作机通道契约草案](../contracts/03-workstation-channel.md)
+- 约束决策：[云端中枢与可选工作机拓扑](../decisions/0002-cloud-centered-topology.md)、[跨端工程与工作机基线](../decisions/0007-engineering-baseline.md)
+
 ## 定位
 
 工作机端是 ArcMind V2 的可选执行扩展。它安装在用户自己的工作电脑上，让云端主 Agent 在用户授权范围内调用本地工具、文件和开发环境。它不是云端后端的替代品，也不是新的通用编程 Agent。

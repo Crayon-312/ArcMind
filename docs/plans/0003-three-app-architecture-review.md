@@ -3,6 +3,13 @@
 状态：done
 最后更新：2026-07-30
 
+## 关系导航
+
+- 所属领域：[计划内容地图](00-plans-map.md)
+- 发布决策：[单仓库管理三套独立应用](../decisions/0004-three-app-monorepo.md)
+- 发布架构：[代码仓库与三套可部署应用](../architecture/09-repository-and-deployable-apps.md)、[三端架构一致性与风险审查](../architecture/10-three-end-risk-review.md)
+- 发布顺序：[V2 分步实施顺序](../product/05-build-sequence.md)
+
 ## 目标
 
 重新核对手机 Web、云端后端和工作机客户端的既有构想，明确三块代码的产品与部署边界，比较三仓库和单仓库三应用，并给出可逐步落地的开发顺序。
@@ -32,11 +39,11 @@
 
 | 影响类型 | 内容 | 状态 | 写回位置 |
 |---|---|---|---|
-| 产品 | 明确三块代码和三个部署单元 | current | `docs/product/02-scope-and-requirements.md` |
-| 架构 | 提议一个仓库管理三套独立应用 | proposed | `docs/architecture/09-repository-and-deployable-apps.md` |
-| 模块 | 工作机安装器归入工作机客户端 | current | `docs/architecture/04-workstation-client.md` |
-| 路线 | 云端基础先行，随后纵向切片联调 | proposed | `docs/product/05-build-sequence.md` |
-| 风险 | 记录 12 项架构问题与修正 | mixed | `docs/architecture/10-three-end-risk-review.md` |
+| 产品 | 明确三块代码和三个部署单元 | current | [产品范围与需求](../product/02-scope-and-requirements.md) |
+| 架构 | 提议一个仓库管理三套独立应用 | proposed | [代码仓库与三套可部署应用](../architecture/09-repository-and-deployable-apps.md) |
+| 模块 | 工作机安装器归入工作机客户端 | current | [工作机端](../architecture/04-workstation-client.md) |
+| 路线 | 云端基础先行，随后纵向切片联调 | proposed | [V2 分步实施顺序](../product/05-build-sequence.md) |
+| 风险 | 记录 12 项架构问题与修正 | mixed | [三端架构一致性与风险审查](../architecture/10-three-end-risk-review.md) |
 | 记忆 | 写入三端事实及两个开放问题 | mixed | `.agent-context/memory-sources/` |
 
 ## 任务清单

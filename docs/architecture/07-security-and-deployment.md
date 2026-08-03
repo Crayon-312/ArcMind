@@ -3,6 +3,15 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 上级架构：[系统上下文与总体边界](01-system-context.md)
+- 身份模块：[身份与访问](../modules/identity-access.md)
+- 身份流程：[身份与工作机绑定](../business/04-identity-and-device-flow.md)
+- 跨端边界：[契约内容地图](../contracts/00-contracts-map.md)
+- 工程决策：[跨端工程与工作机基线](../decisions/0007-engineering-baseline.md)
+
 ## 信任边界
 
 ArcMind 跨越公网浏览器、云端服务、外部模型供应商和用户工作机。任何一段连接都不能因为“个人项目”而默认可信。

@@ -3,6 +3,13 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[产品内容地图](00-product-map.md)
+- 上游定位：[产品背景与愿景](01-background-and-vision.md)
+- 需求边界：[产品范围与需求](02-scope-and-requirements.md)
+- 核心体验：[实时对话与任务形成](../business/01-conversation-flow.md)
+
 ## 首要用户
 
 V2 首先服务项目作者本人，设计上保留其他个人用户自部署或使用同类服务的可能，但首版不以组织级多租户为目标。

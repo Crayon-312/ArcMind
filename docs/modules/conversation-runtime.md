@@ -3,6 +3,13 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[模块内容地图](00-modules-map.md)
+- 运行时架构：[产品 Agent Runtime 协作模型](../architecture/05-agent-runtime.md)
+- 核心流程：[实时对话与任务形成](../business/01-conversation-flow.md)
+- 跨端契约：[跨端事件契约基线](../contracts/01-cross-end-events.md)、[云端公开 API 契约草案](../contracts/02-cloud-public-api.md)
+
 ## 职责
 
 管理文字与实时语音会话、轮次、转写最终性、会话摘要、响应取消和供应商会话映射。

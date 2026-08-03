@@ -3,6 +3,13 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[领域内容地图](00-domain-map.md)
+- 上游范围：[产品范围与需求](../product/02-scope-and-requirements.md)
+- 下游模型：[核心领域模型](01-core-domain-model.md)
+- 术语使用者：[模块内容地图](../modules/00-modules-map.md)、[契约内容地图](../contracts/00-contracts-map.md)
+
 ## 目的
 
 同一概念在手机端、云端、工作机和模型供应商中可能有不同叫法。本文件定义项目统一语言；接口和代码命名应以这里的语义为准，再由适配层映射外部供应商术语。

@@ -3,6 +3,14 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 上级架构：[系统上下文与总体边界](01-system-context.md)
+- 组织决策：[单仓库管理三套独立应用](../decisions/0004-three-app-monorepo.md)
+- 工程基线：[跨端工程与工作机基线](../decisions/0007-engineering-baseline.md)
+- 实施顺序：[V2 分步实施顺序](../product/05-build-sequence.md)
+
 ## 结论摘要
 
 产品边界已经确认包含手机 Web、云端后端和工作机客户端三块代码。工程组织采用一个 Monorepo（单体仓库）管理三套独立应用，而不是现在拆成三个 Git 仓库。

@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 架构结果：[手机 Web 端](../architecture/02-mobile-web.md)
+- 模块落点：[手机 Web 模块](../modules/mobile-web.md)
+- 落实台账：[V2 首阶段技术基线](../plans/0004-v2-technology-baseline.md)
+
 ## 背景
 
 手机端是前台打开即用的 Web 应用，首版负责注册登录、文字与实时语音交互、任务确认、进度和消息，不需要 SEO、服务端渲染、后台持续通话或原生系统控制。

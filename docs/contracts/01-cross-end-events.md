@@ -3,6 +3,13 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[契约内容地图](00-contracts-map.md)
+- 上级架构：[系统上下文与总体边界](../architecture/01-system-context.md)
+- 业务来源：[实时对话与任务形成](../business/01-conversation-flow.md)、[任务生命周期](../business/02-task-lifecycle.md)、[提醒与通知](../business/03-reminder-and-notification.md)
+- 责任模块：[模块内容地图](../modules/00-modules-map.md)
+
 本文先定义语义级契约。具体 URL、传输协议和字段结构需在技术栈确定后形成版本化 API（应用程序接口）契约。
 
 ## 统一事件信封

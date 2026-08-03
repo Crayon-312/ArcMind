@@ -3,6 +3,13 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[契约内容地图](00-contracts-map.md)
+- 客户端边界：[手机 Web 端](../architecture/02-mobile-web.md)、[手机 Web 模块](../modules/mobile-web.md)
+- 业务来源：[实时对话与任务形成](../business/01-conversation-flow.md)、[身份与工作机绑定](../business/04-identity-and-device-flow.md)
+- 事件语义：[跨端事件契约基线](01-cross-end-events.md)
+
 ## 目标
 
 本契约描述手机 Web 端可以依赖的资源语义。当前不锁定后端框架，路径和载荷在实现前仍可调整，但资源归属和越权边界必须保持。

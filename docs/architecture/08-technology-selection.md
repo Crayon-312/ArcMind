@@ -3,6 +3,14 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 上游边界：[产品范围与需求](../product/02-scope-and-requirements.md)、[系统上下文与总体边界](01-system-context.md)
+- 已接受选择：[决策内容地图](../decisions/00-decisions-map.md)
+- 落实台账：[V2 首阶段技术基线](../plans/0004-v2-technology-baseline.md)
+- 进入开发门禁：[第一阶段设计就绪验收](../quality/02-phase-1-design-acceptance.md)
+
 本文记录 ArcMind V2 已确认的首阶段技术基线、明确延期的选择以及仍需专项验证的开放问题。具体依赖版本在创建工程骨架时锁定到当时稳定版，不在架构文档中追逐每个补丁版本。
 
 ## 选型原则
@@ -18,21 +26,21 @@
 
 | 领域 | 选择 | 状态 | 决策记录 |
 |---|---|---|---|
-| 仓库 | 单仓库三套独立应用 | accepted | `docs/decisions/0004-three-app-monorepo.md` |
-| 手机 Web | React + TypeScript + Vite + React Router + TanStack Query | accepted | `docs/decisions/0006-mobile-web-stack.md` |
-| 手机样式 | Tailwind CSS + CSS 变量设计令牌 | accepted | `docs/decisions/0006-mobile-web-stack.md` |
-| 云端 API | Python 3.12 + FastAPI + Pydantic + Uvicorn | accepted | `docs/decisions/0005-cloud-agent-runtime-stack.md` |
-| 产品主 Agent | LangGraph；ArcMind 领域服务和数据库保持事实所有权 | accepted | `docs/decisions/0005-cloud-agent-runtime-stack.md` |
-| Python 工程 | uv + Ruff + Pyright + pytest | accepted | `docs/decisions/0007-engineering-baseline.md` |
-| TypeScript 工程 | Node.js LTS + pnpm workspace + ESLint + Vitest | accepted | `docs/decisions/0007-engineering-baseline.md` |
-| 端到端测试 | Playwright，覆盖 Chromium、WebKit 和 Firefox | accepted | `docs/decisions/0007-engineering-baseline.md` |
-| 公开契约 | OpenAPI 3.1 + JSON Schema；生成客户端类型 | accepted | `docs/decisions/0007-engineering-baseline.md` |
-| 本地与 VPS 编排 | Docker Compose | accepted | `docs/decisions/0007-engineering-baseline.md` |
-| 工作机 MVP | Electron + TypeScript + React/Vite 渲染层 | accepted | `docs/decisions/0007-engineering-baseline.md` |
-| 主数据库 | PostgreSQL 18 | accepted | `docs/decisions/0008-primary-data-stack.md` |
-| 数据访问与迁移 | SQLAlchemy 2.0 + psycopg 3 + Alembic | accepted | `docs/decisions/0008-primary-data-stack.md` |
-| 记忆向量索引 | 同库 pgvector，可重建且延迟启用 | accepted | `docs/decisions/0008-primary-data-stack.md` |
-| 耐久 Job 与提醒调度 | Procrastinate + PostgreSQL；领域提醒由数据库扫描生成触发实例 | accepted | `docs/decisions/0009-durable-job-stack.md` |
+| 仓库 | 单仓库三套独立应用 | accepted | [决策 0004](../decisions/0004-three-app-monorepo.md) |
+| 手机 Web | React + TypeScript + Vite + React Router + TanStack Query | accepted | [决策 0006](../decisions/0006-mobile-web-stack.md) |
+| 手机样式 | Tailwind CSS + CSS 变量设计令牌 | accepted | [决策 0006](../decisions/0006-mobile-web-stack.md) |
+| 云端 API | Python 3.12 + FastAPI + Pydantic + Uvicorn | accepted | [决策 0005](../decisions/0005-cloud-agent-runtime-stack.md) |
+| 产品主 Agent | LangGraph；ArcMind 领域服务和数据库保持事实所有权 | accepted | [决策 0005](../decisions/0005-cloud-agent-runtime-stack.md) |
+| Python 工程 | uv + Ruff + Pyright + pytest | accepted | [决策 0007](../decisions/0007-engineering-baseline.md) |
+| TypeScript 工程 | Node.js LTS + pnpm workspace + ESLint + Vitest | accepted | [决策 0007](../decisions/0007-engineering-baseline.md) |
+| 端到端测试 | Playwright，覆盖 Chromium、WebKit 和 Firefox | accepted | [决策 0007](../decisions/0007-engineering-baseline.md) |
+| 公开契约 | OpenAPI 3.1 + JSON Schema；生成客户端类型 | accepted | [决策 0007](../decisions/0007-engineering-baseline.md) |
+| 本地与 VPS 编排 | Docker Compose | accepted | [决策 0007](../decisions/0007-engineering-baseline.md) |
+| 工作机 MVP | Electron + TypeScript + React/Vite 渲染层 | accepted | [决策 0007](../decisions/0007-engineering-baseline.md) |
+| 主数据库 | PostgreSQL 18 | accepted | [决策 0008](../decisions/0008-primary-data-stack.md) |
+| 数据访问与迁移 | SQLAlchemy 2.0 + psycopg 3 + Alembic | accepted | [决策 0008](../decisions/0008-primary-data-stack.md) |
+| 记忆向量索引 | 同库 pgvector，可重建且延迟启用 | accepted | [决策 0008](../decisions/0008-primary-data-stack.md) |
+| 耐久 Job 与提醒调度 | Procrastinate + PostgreSQL；领域提醒由数据库扫描生成触发实例 | accepted | [决策 0009](../decisions/0009-durable-job-stack.md) |
 
 ## 现在不选的内容
 

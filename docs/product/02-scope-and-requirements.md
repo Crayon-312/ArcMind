@@ -3,6 +3,14 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[产品内容地图](00-product-map.md)
+- 上游依据：[产品背景与愿景](01-background-and-vision.md)、[用户与关键场景](03-users-and-scenarios.md)
+- 领域细化：[核心领域模型](../domain/01-core-domain-model.md)
+- 架构细化：[系统上下文与总体边界](../architecture/01-system-context.md)
+- 实施与验收：[V2 分步实施顺序](05-build-sequence.md)、[第一阶段设计就绪验收](../quality/02-phase-1-design-acceptance.md)
+
 ## 需求优先级
 
 - `P0`：首个可用闭环必须具备。

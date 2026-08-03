@@ -3,6 +3,15 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 上游需求：[产品范围与需求](../product/02-scope-and-requirements.md)
+- 领域语义：[核心领域模型](../domain/01-core-domain-model.md)
+- 端侧细化：[手机 Web 端](02-mobile-web.md)、[云端后端](03-cloud-backend.md)、[工作机端](04-workstation-client.md)
+- 拓扑决策：[云端中枢与可选工作机拓扑](../decisions/0002-cloud-centered-topology.md)
+- 跨端边界：[契约内容地图](../contracts/00-contracts-map.md)
+
 ## 总体拓扑
 
 ```text

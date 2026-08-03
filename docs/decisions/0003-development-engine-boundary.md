@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 产品运行时：[产品 Agent Runtime 协作模型](../architecture/05-agent-runtime.md)
+- 协作发布：[Obsidian 知识库与任务隔离发布](0010-obsidian-task-publication.md)
+- 落实台账：[ArcMind V2 文档基线](../plans/0001-v2-documentation-foundation.md)
+
 ## 背景
 
 ArcMind V2 未来会包含产品主 Agent、任务编排器和工作机执行器。同时，本仓库使用 Agent Context OS 规范 Codex 等开发工具的工作方式。两者都可能被简称为 Engine 或 Agent，容易造成架构混淆。

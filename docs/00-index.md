@@ -1,106 +1,75 @@
-# ArcMind V2 项目文档索引
+# ArcMind V2 项目文档总索引
 
 状态：current
 最后校验日期：2026-08-03
 
-本目录描述 ArcMind V2 的产品事实、业务流程、系统边界、公开契约和阶段计划。Agent Context OS（智能协作上下文操作系统）的完整开发规则不复制到这里；开发工具从 `AGENTS.md` 和 `.agent-context/config.json` 加载外部引擎。
+本索引是 ArcMind V2 知识网络的总入口，只负责连接各领域内容地图和核心阅读路径。每个领域的完整文件清单、阅读顺序和关系规则由对应内容地图维护，避免总索引成为连接全部文件的扁平中心。
 
-## Obsidian 入口与任务隔离
+Agent Context OS（智能协作上下文操作系统）的完整开发规则不复制到项目文档；开发工具从仓库根 `AGENTS.md` 和 `.agent-context/config.json` 加载指定版本引擎。
 
-- `README.md`：Obsidian 知识库首页和目录说明。
-- `plans/`：每个任务一个方案落实台账，也是隔离讨论、批准方案和执行记录的任务舱。
-- `templates/task-capsule.md`：新任务舱模板。
-- `assets/`：文档附件目录；仅提交项目需要且适合版本控制的附件。
-- `.obsidian/app.json`：团队共享的最小 Obsidian 配置；个人窗口、插件和主题状态不进入 Git。
+## 知识领域
 
-任务舱不等于产品运行时的 `Task`。讨论阶段只改状态为 `draft` 的任务舱；用户确认后按有序清单实施，验证通过后再把代码与正式文档一起发布为当前事实。
+| 领域 | 回答的问题 | 内容地图 |
+|---|---|---|
+| 产品 | 为什么做、为谁做、做什么 | [产品内容地图](product/00-product-map.md) |
+| 领域 | 核心概念、对象和不变量是什么 | [领域内容地图](domain/00-domain-map.md) |
+| 架构 | 系统如何分层、部署和流转数据 | [架构内容地图](architecture/00-architecture-map.md) |
+| 模块 | 每个可开发单元负责什么 | [模块内容地图](modules/00-modules-map.md) |
+| 业务 | 用户行为如何形成跨模块流程 | [业务内容地图](business/00-business-map.md) |
+| 契约 | 手机、云端和工作机如何稳定协作 | [契约内容地图](contracts/00-contracts-map.md) |
+| 决策 | 当前取舍为什么成立 | [决策内容地图](decisions/00-decisions-map.md) |
+| 计划 | 已批准方案如何按清单落实 | [计划内容地图](plans/00-plans-map.md) |
+| 质量 | 什么证据足以进入下一阶段 | [质量内容地图](quality/00-quality-map.md) |
 
-## 必读顺序
+这些内容地图分别对应 `docs/product/`、`docs/domain/`、`docs/architecture/`、`docs/modules/`、`docs/business/`、`docs/contracts/`、`docs/decisions/`、`docs/plans/` 和 `docs/quality/`，目录用于稳定分类，链接用于表达知识关系。
+
+## 核心知识主链
+
+1. 从[产品背景与愿景](product/01-background-and-vision.md)理解目标与非目标。
+2. 用[产品范围与需求](product/02-scope-and-requirements.md)确认首版边界。
+3. 通过[统一术语](domain/00-glossary.md)和[核心领域模型](domain/01-core-domain-model.md)建立共同语言。
+4. 从[系统上下文与总体边界](architecture/01-system-context.md)进入端侧与基础设施设计。
+5. 根据[模块内容地图](modules/00-modules-map.md)和[业务内容地图](business/00-business-map.md)定位职责与流程。
+6. 用[契约内容地图](contracts/00-contracts-map.md)确认跨端公开边界。
+7. 从[决策内容地图](decisions/00-decisions-map.md)追溯关键取舍。
+8. 按[计划内容地图](plans/00-plans-map.md)中的已批准清单执行。
+9. 使用[质量内容地图](quality/00-quality-map.md)完成验证与发布闭环。
+
+## Obsidian 与任务隔离
+
+- [知识库首页](README.md)提供人类阅读入口。
+- [任务舱模板](templates/task-capsule.md)用于创建单文件方案落实台账。
+- [文档附件规则](assets/attachments-guide.md)约束可提交附件和大文件。
+- [知识关系分层决策](decisions/0011-knowledge-relationship-model.md)定义分类关系、语义关系和历史关系。
+- Git 中的 Markdown（轻量标记文档）是事实源；Obsidian（本地 Markdown 知识库工具）只提供导航、检索和关系图视图。
+
+任务舱不等于 ArcMind 产品运行时的 `Task`。讨论阶段只改草稿状态（`draft`）的任务舱；用户确认后按有序清单实施，验证通过后再把实现、正式文档和项目记忆一起发布。
+
+## Agent 必读顺序
 
 所有涉及产品或架构的任务至少读取：
 
-1. `AGENTS.md`
-2. `.agent-context/config.json`
-3. 本文件
-4. `product/01-background-and-vision.md`
-5. `product/02-scope-and-requirements.md`
-6. `architecture/01-system-context.md`
-7. 当前任务对应的模块或业务文档
-
-## 文档地图
-
-### 产品
-
-- `product/01-background-and-vision.md`：项目背景、定位、价值和非目标。
-- `product/02-scope-and-requirements.md`：功能需求、质量要求和优先级。
-- `product/03-users-and-scenarios.md`：用户类型和关键使用场景。
-- `product/04-delivery-roadmap.md`：从文档基线到手机端、云端和工作机端的交付顺序。
-- `product/05-build-sequence.md`：云端先行、纵向切片联调的具体实施顺序提议。
-
-### 架构（`docs/architecture/`）
-
-- `architecture/01-system-context.md`：系统组成、信任边界和端到端数据流。
-- `architecture/02-mobile-web.md`：手机 Web 端职责和限制。
-- `architecture/03-cloud-backend.md`：云端服务职责和内部模块。
-- `architecture/04-workstation-client.md`：可选工作机端的职责、权限和连接方式。
-- `architecture/05-agent-runtime.md`：产品运行时主 Agent、语音层和执行器的协作方式。
-- `architecture/06-data-and-memory.md`：会话、记忆、任务和提醒的数据职责。
-- `architecture/07-security-and-deployment.md`：传输、身份、设备、权限和部署边界。
-- `architecture/08-technology-selection.md`：已确认的首阶段技术基线、延期项及后续决策门禁。
-- `architecture/09-repository-and-deployable-apps.md`：一个仓库、三套应用和共享契约的代码组织决策。
-- `architecture/10-three-end-risk-review.md`：三端方案的一致性检查、风险和修正建议。
-- `architecture/11-data-storage-and-transactions.md`：主数据库、表组、事务、检索、迁移与备份设计。
-- `architecture/12-durable-jobs-and-scheduling.md`：内部 Job、重试、死信、工作机租约和提醒调度设计。
-
-### 领域与模块
-
-- `domain/00-glossary.md`：产品统一语言和容易混淆的术语边界。
-- `domain/01-core-domain-model.md`：核心业务对象、关系、所有权和不变量。
-- `modules/`：手机端、身份、会话、主 Agent、任务、记忆、提醒和工作机等模块卡片。
-
-### 业务与契约
-
-- `business/01-conversation-flow.md`：实时对话到任务确认的主流程。
-- `business/02-task-lifecycle.md`：任务状态机、执行与进度反馈。
-- `business/03-reminder-and-notification.md`：定时提醒和完成通知。
-- `contracts/01-cross-end-events.md`：跨端事件的语义级契约基线。
-- `contracts/02-cloud-public-api.md`：手机端访问云端的资源级 API 草案。
-- `contracts/03-workstation-channel.md`：云端与工作机连接和执行协议草案。
-
-### 决策、计划与质量
-
-- `decisions/0001-v2-independent-line.md`：V2 与旧版双线并存决策。
-- `decisions/0002-cloud-centered-topology.md`：采用云端中枢和可选工作机扩展的决策。
-- `decisions/0003-development-engine-boundary.md`：开发协作引擎与产品运行时分离决策。
-- `decisions/0004-three-app-monorepo.md`：单仓库管理三套独立应用的决策。
-- `decisions/0005-cloud-agent-runtime-stack.md`：Python、FastAPI 与 LangGraph 云端运行时决策。
-- `decisions/0006-mobile-web-stack.md`：React、TypeScript 与 Vite 手机 Web 决策。
-- `decisions/0007-engineering-baseline.md`：跨端依赖、契约、测试、部署与工作机技术基线。
-- `decisions/0008-primary-data-stack.md`：PostgreSQL、SQLAlchemy、Alembic 与 pgvector 数据栈决策。
-- `decisions/0009-durable-job-stack.md`：Procrastinate、PostgreSQL 与提醒扫描的耐久后台工作决策。
-- `decisions/0010-obsidian-task-publication.md`：Obsidian 知识库、任务隔离和文档发布闭环决策。
-- `plans/0001-v2-documentation-foundation.md`：本轮文档基线落实台账。
-- `plans/0002-v2-design-readiness.md`：领域与模块设计细化台账。
-- `plans/0003-three-app-architecture-review.md`：三端代码组织和开发顺序审查台账。
-- `plans/0004-v2-technology-baseline.md`：首阶段技术选型研究、决策和同步台账。
-- `plans/0005-cloud-data-foundation.md`：云端数据、事务、迁移、检索和备份设计台账。
-- `plans/0006-durable-jobs-and-scheduling.md`：耐久 Job、重试、恢复和提醒调度设计台账。
-- `plans/0007-obsidian-task-isolation.md`：Obsidian 知识库与任务隔离流程落实台账。
-- `quality/01-documentation-acceptance.md`：当前阶段的文档验收口径。
-- `quality/02-phase-1-design-acceptance.md`：进入第一阶段代码开发前的设计门禁。
+1. 仓库根 `AGENTS.md`。
+2. `.agent-context/config.json` 指定的协作引擎。
+3. 本总索引。
+4. [产品背景与愿景](product/01-background-and-vision.md)。
+5. [产品范围与需求](product/02-scope-and-requirements.md)。
+6. [系统上下文与总体边界](architecture/01-system-context.md)。
+7. 当前任务对应的领域内容地图、模块、流程、契约、决策和质量文档。
 
 ## 状态规则
 
-- `current`：用户已确认且当前有效，可作为开发依据。
-- `draft`：结构化草稿，必须确认后才能作为实现依据。
-- `assumption`：用于推进分析的假设，必须验证。
-- `open`：存在明确待决问题。
-- `deprecated`：已废弃，仅用于追溯。
+- 当前有效（`current`）：用户已确认且仍然有效，可以作为开发依据。
+- 结构化草稿（`draft`）：必须确认后才能作为实现依据。
+- 分析假设（`assumption`）：用于推进分析，必须验证。
+- 开放问题（`open`）：存在明确待决事项。
+- 已废弃（`deprecated`）：只用于历史追溯。
 
 ## 更新规则
 
-- 产品定位或范围变化：更新 `product/`、相关决策和项目记忆。
-- 端侧职责或依赖变化：更新 `architecture/`、跨端契约和项目记忆。
-- 流程、状态或验收变化：更新 `business/`、`quality/` 和相关记忆。
-- 技术选型只有通过 `architecture/08-technology-selection.md` 的决策门禁后才能成为 `current`。
-- 项目记忆用于检索，本文档体系用于承载完整事实；两者必须保持一致。
+- 产品定位或范围变化：更新产品内容地图下的事实、相关决策、计划和项目记忆。
+- 领域概念或状态变化：同步检查业务流程、模块、数据架构和契约。
+- 端侧职责或依赖变化：同步检查系统架构、模块卡片、跨端契约和质量标准。
+- 技术选型只有通过[技术选型与决策门禁](architecture/08-technology-selection.md)后才能成为当前事实。
+- 新增正式文档必须进入一个领域内容地图；当前有效文档不得成为关系孤岛。
+- 项目记忆用于检索，正式文档承载完整事实；两者必须保持一致。

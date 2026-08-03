@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 架构结果：[代码仓库与三套可部署应用](../architecture/09-repository-and-deployable-apps.md)
+- 实施顺序：[V2 分步实施顺序](../product/05-build-sequence.md)
+- 落实台账：[三端代码组织与实施顺序审查](../plans/0003-three-app-architecture-review.md)
+
 ## 背景
 
 ArcMind V2 需要手机 Web、云端后端和工作机客户端三块代码。需要确定它们是三个 Git 仓库，还是同一仓库中的三个独立应用。

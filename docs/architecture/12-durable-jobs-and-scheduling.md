@@ -3,6 +3,15 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 数据基础：[数据存储、事务与检索设计](11-data-storage-and-transactions.md)
+- 业务状态：[任务生命周期](../business/02-task-lifecycle.md)、[提醒与通知](../business/03-reminder-and-notification.md)
+- 责任模块：[任务编排](../modules/task-orchestration.md)、[提醒与通知模块](../modules/reminder-notification.md)
+- 技术决策：[耐久 Job 与提醒调度技术栈](../decisions/0009-durable-job-stack.md)
+- 落实台账：[耐久 Job 与提醒调度](../plans/0006-durable-jobs-and-scheduling.md)
+
 ## 目标
 
 ArcMind 的对话、任务、提醒和工作机执行都可能跨越 Web 请求、进程重启和短暂网络故障。本设计定义首版耐久后台工作、延迟调度、重试、租约与恢复边界，保证系统不会把“队列已消费”误认为“用户任务已完成”。

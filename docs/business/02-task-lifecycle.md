@@ -3,6 +3,14 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[业务内容地图](00-business-map.md)
+- 领域语义：[核心领域模型](../domain/01-core-domain-model.md)
+- 责任模块：[任务编排](../modules/task-orchestration.md)、[工作机网关](../modules/workstation-gateway.md)
+- 后台机制：[耐久 Job、调度与恢复设计](../architecture/12-durable-jobs-and-scheduling.md)
+- 跨端契约：[跨端事件契约基线](../contracts/01-cross-end-events.md)、[云端与工作机通道契约草案](../contracts/03-workstation-channel.md)
+
 ## 状态定义
 
 | 状态 | 含义 | 用户可见文案 | 可操作 |

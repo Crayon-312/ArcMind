@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 架构结果：[数据存储、事务与检索设计](../architecture/11-data-storage-and-transactions.md)
+- 领域依据：[核心领域模型](../domain/01-core-domain-model.md)
+- 落实台账：[云端数据与持久化基线](../plans/0005-cloud-data-foundation.md)
+
 ## 背景
 
 ArcMind 需要同时维护身份、会话、任务状态机、审批、执行尝试、长期记忆、提醒和通知。这些对象之间存在强关联、状态约束和多表原子写入，同时记忆又需要结构化过滤、关键词检索和后续语义检索。

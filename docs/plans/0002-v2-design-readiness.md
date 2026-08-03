@@ -3,6 +3,14 @@
 状态：done
 最后更新：2026-07-30
 
+## 关系导航
+
+- 所属领域：[计划内容地图](00-plans-map.md)
+- 发布领域：[核心领域模型](../domain/01-core-domain-model.md)、[模块内容地图](../modules/00-modules-map.md)
+- 发布流程：[身份与工作机绑定](../business/04-identity-and-device-flow.md)
+- 发布契约：[契约内容地图](../contracts/00-contracts-map.md)
+- 验收标准：[第一阶段设计就绪验收](../quality/02-phase-1-design-acceptance.md)
+
 ## 目标
 
 在不编写业务代码、不擅自确定技术栈的前提下，将 V2 文档从产品与总体架构基线细化到领域模型、模块卡片、身份流程和跨端契约草案，为下一轮技术选型和用户确认提供可审查输入。
@@ -24,11 +32,11 @@
 
 | 影响类型 | 本轮内容 | 状态 | 写回位置 |
 |---|---|---|---|
-| 业务 | 增加身份和设备绑定流程 | draft | `docs/business/04-identity-and-device-flow.md` |
+| 业务 | 增加身份和设备绑定流程 | draft | [身份与工作机绑定](../business/04-identity-and-device-flow.md) |
 | 领域 | 定义核心对象、关系和不变量 | draft | `docs/domain/` |
 | 模块 | 拆分关键模块职责和依赖 | mixed | `docs/modules/` |
 | 接口 | 增加手机公开 API 与工作机通道草案 | draft | `docs/contracts/` |
-| 质量 | 定义第一阶段代码前置门禁 | draft | `docs/quality/02-phase-1-design-acceptance.md` |
+| 质量 | 定义第一阶段代码前置门禁 | draft | [第一阶段设计就绪验收](../quality/02-phase-1-design-acceptance.md) |
 | 记忆 | 增加邮箱身份事实和设计开放问题 | mixed | `.agent-context/memory-sources/` |
 
 ## 任务清单

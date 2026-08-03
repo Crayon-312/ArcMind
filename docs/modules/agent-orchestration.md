@@ -3,6 +3,13 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[模块内容地图](00-modules-map.md)
+- 运行时架构：[产品 Agent Runtime 协作模型](../architecture/05-agent-runtime.md)
+- 核心流程：[实时对话与任务形成](../business/01-conversation-flow.md)
+- 下游协作：[任务编排](task-orchestration.md)、[记忆服务](memory-service.md)
+
 ## 职责
 
 理解用户目标、检索必要上下文、发起澄清、形成任务草稿、选择受控工具或请求任务编排。

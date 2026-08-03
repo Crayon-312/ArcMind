@@ -3,6 +3,15 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 领域语义：[核心领域模型](../domain/01-core-domain-model.md)
+- 上级服务：[云端后端](03-cloud-backend.md)、[数据、上下文与记忆边界](06-data-and-memory.md)
+- 后台工作：[耐久 Job、调度与恢复设计](12-durable-jobs-and-scheduling.md)
+- 技术决策：[主数据库与持久化技术栈](../decisions/0008-primary-data-stack.md)
+- 落实台账：[云端数据与持久化基线](../plans/0005-cloud-data-foundation.md)
+
 ## 总体结构
 
 首版使用一套 PostgreSQL 实例作为云端主事实库。逻辑模块共享数据库服务，但通过 Python 模块、Repository（仓储）、外键和事务边界维护所有权，不提前拆成多个数据库或微服务。

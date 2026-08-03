@@ -3,6 +3,13 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[业务内容地图](00-business-map.md)
+- 安全边界：[安全与部署边界](../architecture/07-security-and-deployment.md)
+- 责任模块：[身份与访问](../modules/identity-access.md)、[工作机网关](../modules/workstation-gateway.md)
+- 公开契约：[云端公开 API 契约草案](../contracts/02-cloud-public-api.md)、[云端与工作机通道契约草案](../contracts/03-workstation-channel.md)
+
 ## 已确认业务规则
 
 - 手机端通过邮箱注册并登录云端。

@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 架构结果：[系统上下文与总体边界](../architecture/01-system-context.md)、[工作机端](../architecture/04-workstation-client.md)
+- 业务依据：[提醒与通知](../business/03-reminder-and-notification.md)
+- 复核台账：[三端代码组织与实施顺序审查](../plans/0003-three-app-architecture-review.md)
+
 ## 背景
 
 手机网页会被关闭，工作机可能没有公网 IP、经常离线或根本未安装。产品还需要跨会话记忆、任务进度、定时提醒和完成通知，仅靠手机与工作机点对点连接无法稳定满足这些需求。

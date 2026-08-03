@@ -3,6 +3,13 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[模块内容地图](00-modules-map.md)
+- 端侧架构：[工作机端](../architecture/04-workstation-client.md)
+- 参与流程：[身份与工作机绑定](../business/04-identity-and-device-flow.md)、[任务生命周期](../business/02-task-lifecycle.md)
+- 公开契约：[云端与工作机通道契约草案](../contracts/03-workstation-channel.md)
+
 ## 职责
 
 维护工作机出站连接、在线状态、能力注册、任务租约传输、回执、进度、取消和结果事件。

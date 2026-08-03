@@ -3,6 +3,14 @@
 状态：current
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[架构内容地图](00-architecture-map.md)
+- 领域语义：[核心领域模型](../domain/01-core-domain-model.md)
+- 责任模块：[记忆服务](../modules/memory-service.md)、[任务编排](../modules/task-orchestration.md)
+- 物理设计：[数据存储、事务与检索设计](11-data-storage-and-transactions.md)
+- 提醒事实：[提醒与通知](../business/03-reminder-and-notification.md)
+
 ## 为什么需要云端存储
 
 手机 Web 页面可能被关闭，工作机也可能离线。如果会话、记忆和任务只保存在某一端，跨设备连续性、提醒和异步任务就无法可靠实现。因此云端保存业务事实，本地只保留可丢弃缓存和执行所需的最小材料。
@@ -67,7 +75,7 @@
 - 二进制产物与未来需要保留的音频不直接写入 PostgreSQL，只保存元数据和对象存储引用。
 - 业务写入与跨模块事件使用 Transactional Outbox（事务发件箱）保证同一事务提交；外部回调使用 Inbox（收件箱）或幂等记录去重。
 
-详细表组、事务边界和备份要求见 `docs/architecture/11-data-storage-and-transactions.md`。
+详细表组、事务边界和备份要求见[数据存储、事务与检索设计](11-data-storage-and-transactions.md)。
 
 ## 待定设计
 

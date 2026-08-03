@@ -3,6 +3,14 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[模块内容地图](00-modules-map.md)
+- 领域语义：[核心领域模型](../domain/01-core-domain-model.md)
+- 数据边界：[数据、上下文与记忆边界](../architecture/06-data-and-memory.md)
+- 物理设计：[数据存储、事务与检索设计](../architecture/11-data-storage-and-transactions.md)
+- 使用模块：[主 Agent Runtime](agent-orchestration.md)
+
 ## 职责
 
 管理候选记忆、来源、去重、冲突、有效状态、检索、更正、删除和索引重建。

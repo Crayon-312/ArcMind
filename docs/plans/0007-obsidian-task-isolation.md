@@ -4,6 +4,14 @@
 最后更新：2026-08-03
 变更等级：S3（项目协作流程与正式文档结构变更）
 
+## 关系导航
+
+- 所属领域：[计划内容地图](00-plans-map.md)
+- 发布决策：[Obsidian 知识库与任务隔离发布](../decisions/0010-obsidian-task-publication.md)
+- 发布入口：[ArcMind V2 知识库](../README.md)
+- 后续台账：[知识关系重构](0008-knowledge-relationship-reconstruction.md)
+- 验收标准：[V2 文档基线验收](../quality/01-documentation-acceptance.md)
+
 ## 目标
 
 在不引入服务、数据库、社区插件或每任务强制工作树的前提下，让 `docs/` 可直接作为 Obsidian（本地 Markdown 知识库工具）打开，并建立“讨论隔离—用户批准—清单执行—验证发布”的最小稳定闭环。
@@ -35,10 +43,10 @@
 
 | 影响类型 | 内容 | 状态 | 写回位置 |
 |---|---|---|---|
-| 知识库 | `docs/` 可直接作为 Obsidian Vault 打开 | current | `docs/README.md`、`.obsidian/app.json` |
-| 协作 | 单文件任务舱、状态门禁、有序清单和发布闭环 | current | `AGENTS.md`、任务舱模板 |
-| 决策 | 明确 Canvas、工作树、正式文档和 Git 的边界 | accepted | `docs/decisions/0010-obsidian-task-publication.md` |
-| 质量 | 增加知识库与讨论隔离验收项 | current | `docs/quality/01-documentation-acceptance.md` |
+| 知识库 | `docs/` 可直接作为 Obsidian Vault 打开 | current | [知识库首页](../README.md)、[Obsidian 配置](../.obsidian/app.json) |
+| 协作 | 单文件任务舱、状态门禁、有序清单和发布闭环 | current | 仓库根 `AGENTS.md`、[任务舱模板](../templates/task-capsule.md) |
+| 决策 | 明确 Canvas、工作树、正式文档和 Git 的边界 | accepted | [决策 0010](../decisions/0010-obsidian-task-publication.md) |
+| 质量 | 增加知识库与讨论隔离验收项 | current | [V2 文档基线验收](../quality/01-documentation-acceptance.md) |
 | 记忆 | 写回用户确认的稳定协作规则 | current | `.agent-context/memory-sources/memory-collaboration.jsonl` |
 
 ## 有序任务清单

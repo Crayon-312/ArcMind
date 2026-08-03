@@ -3,6 +3,14 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[领域内容地图](00-domain-map.md)
+- 上游语言：[ArcMind V2 统一术语](00-glossary.md)
+- 上游需求：[产品范围与需求](../product/02-scope-and-requirements.md)
+- 行为细化：[业务内容地图](../business/00-business-map.md)、[模块内容地图](../modules/00-modules-map.md)
+- 物理映射：[数据存储、事务与检索设计](../architecture/11-data-storage-and-transactions.md)
+
 ## 聚合边界
 
 | 聚合 | 根对象 | 包含或关联 | 事实所有者 |
@@ -73,7 +81,7 @@ User
 
 ## 物理存储映射
 
-本领域模型仍负责业务语义；已确认的 PostgreSQL 表组、字段约定、事务边界和检索设计见 `docs/architecture/11-data-storage-and-transactions.md`。领域对象、API DTO 和 SQLAlchemy ORM 模型必须保持分离，不能因为物理表已经确定就把本领域草案自动视为全部定稿。
+本领域模型仍负责业务语义；已确认的 PostgreSQL 表组、字段约定、事务边界和检索设计见[数据存储、事务与检索设计](../architecture/11-data-storage-and-transactions.md)。领域对象、API DTO 和 SQLAlchemy ORM 模型必须保持分离，不能因为物理表已经确定就把本领域草案自动视为全部定稿。
 
 ## 待确认点
 

@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 架构结果：[耐久 Job、调度与恢复设计](../architecture/12-durable-jobs-and-scheduling.md)
+- 业务边界：[任务生命周期](../business/02-task-lifecycle.md)、[提醒与通知](../business/03-reminder-and-notification.md)
+- 落实台账：[耐久 Job 与提醒调度](../plans/0006-durable-jobs-and-scheduling.md)
+
 ## 背景
 
 ArcMind 需要在单台 VPS（虚拟专用服务器）上可靠处理 Outbox（事务发件箱）投递、模型后处理、通知、工作机派发、失败重试和提醒触发。它们必须跨进程重启恢复，但不能与用户可见的 `Task` 状态、工作机 `ExecutionLease` 或 LangGraph Checkpoint（检查点）混为一体。

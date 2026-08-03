@@ -3,6 +3,13 @@
 状态：accepted
 日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[决策内容地图](00-decisions-map.md)
+- 架构结果：[云端后端](../architecture/03-cloud-backend.md)、[产品 Agent Runtime 协作模型](../architecture/05-agent-runtime.md)
+- 选型基线：[技术选型与决策门禁](../architecture/08-technology-selection.md)
+- 落实台账：[V2 首阶段技术基线](../plans/0004-v2-technology-baseline.md)
+
 ## 背景
 
 ArcMind 云端既要提供普通 HTTP API、流式事件和长连接，又要承载主 Agent 的计划、审批和恢复逻辑。实时语音、模型和执行器必须可替换，任务与记忆事实不能被某个模型 SDK 私有状态接管。

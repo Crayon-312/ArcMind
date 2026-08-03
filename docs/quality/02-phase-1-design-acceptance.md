@@ -3,6 +3,14 @@
 状态：draft
 最后校验日期：2026-07-30
 
+## 关系导航
+
+- 所属领域：[质量内容地图](00-quality-map.md)
+- 产品边界：[产品范围与需求](../product/02-scope-and-requirements.md)
+- 实施顺序：[V2 分步实施顺序](../product/05-build-sequence.md)
+- 技术门禁：[技术选型与决策门禁](../architecture/08-technology-selection.md)
+- 契约输入：[契约内容地图](../contracts/00-contracts-map.md)
+
 第一阶段目标是实现云端与手机 Web 的安全文字闭环。在创建业务代码骨架前必须通过以下门禁。
 
 ## 必需决策
