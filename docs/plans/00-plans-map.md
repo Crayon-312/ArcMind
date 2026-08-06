@@ -20,10 +20,11 @@
 - [云端数据与持久化基线](0005-cloud-data-foundation.md)
 - [耐久 Job 与提醒调度](0006-durable-jobs-and-scheduling.md)
 - [Obsidian 知识库与任务隔离](0007-obsidian-task-isolation.md)
+- [知识关系重构](0008-knowledge-relationship-reconstruction.md)
 
 ## 当前台账
 
-- [知识关系重构](0008-knowledge-relationship-reconstruction.md)
+- [第一阶段开发入口门禁](0009-phase-1-entry-gate.md)（`draft`，等待方案确认）
 
 ## 使用规则
 
