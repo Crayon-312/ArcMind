@@ -26,6 +26,10 @@
 
 - [第一阶段开发入口门禁](0009-phase-1-entry-gate.md)（执行中，`active`；等待手机、模型、高位公网端口续期方案和告警证据）
 
+## 草稿台账
+
+- [ArcMind 独立 VPS 部署与 HTTPS 迁移](0010-dedicated-vps-deployment.md)（草稿，`draft`；等待新 VPS 信息和完整方案确认，不得执行）
+
 ## 使用规则
 
 - 新任务从[任务舱模板](../templates/task-capsule.md)创建。
