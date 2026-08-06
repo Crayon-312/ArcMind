@@ -1,7 +1,7 @@
 # 产品 Agent Runtime 协作模型
 
 状态：current
-最后校验日期：2026-07-30
+最后校验日期：2026-08-06
 
 ## 关系导航
 
@@ -10,6 +10,7 @@
 - 模块落点：[主 Agent Runtime](../modules/agent-orchestration.md)、[会话与实时交互](../modules/conversation-runtime.md)、[任务编排](../modules/task-orchestration.md)
 - 核心流程：[实时对话与任务形成](../business/01-conversation-flow.md)
 - 技术决策：[云端与产品主 Agent 技术栈](../decisions/0005-cloud-agent-runtime-stack.md)
+- 首个模型：[首个主 Agent 模型使用 DeepSeek V4 Pro](../decisions/0015-first-model-provider.md)
 
 ## 名称边界
 
@@ -57,6 +58,13 @@
 - 将稳定转写、用户确认和结构化意图交给主 Agent。
 - 从云端获得任务真实状态后再播报。
 - 供应商支持函数调用时可以用于低风险会话控制，但仍需经过云端策略层。
+
+## 首个主 Agent 模型适配
+
+- 首个接入使用 DeepSeek `deepseek-v4-pro`，通过 ArcMind `ModelProvider` 端口进入 LangGraph。
+- 供应商流式增量先归一化为 ArcMind 响应事件；公开契约和领域状态不保存供应商私有事件结构。
+- 工具调用只形成参数提议，必须经过本地 Schema（数据结构规范）、权限和任务状态校验后才能执行。
+- 供应商故障保留用户轮次和失败事实，由用户决定重试；首版不自动切换第二家模型。
 
 ## 主 Agent 与子 Agent
 

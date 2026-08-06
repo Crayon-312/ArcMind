@@ -1,7 +1,7 @@
 # 模块卡片：手机 Web
 
 状态：current
-最后校验日期：2026-07-30
+最后校验日期：2026-08-06
 
 ## 关系导航
 
@@ -9,6 +9,8 @@
 - 架构边界：[手机 Web 端](../architecture/02-mobile-web.md)
 - 参与流程：[实时对话与任务形成](../business/01-conversation-flow.md)、[身份与工作机绑定](../business/04-identity-and-device-flow.md)
 - 公开契约：[云端公开 API 契约草案](../contracts/02-cloud-public-api.md)
+- 第一阶段页面：[第一阶段手机页面与状态地图](../product/06-phase-1-mobile-page-map.md)
+- 测试门禁：[第一阶段身份与文字闭环测试矩阵](../quality/03-phase-1-test-matrix.md)
 
 ## 职责
 

@@ -1,7 +1,7 @@
 # 核心领域模型
 
 状态：draft
-最后校验日期：2026-07-30
+最后校验日期：2026-08-06
 
 ## 关系导航
 
@@ -15,8 +15,8 @@
 
 | 聚合 | 根对象 | 包含或关联 | 事实所有者 |
 |---|---|---|---|
-| 身份 | `User` | `UserSession`、`DeviceBinding`、偏好 | 身份与访问模块 |
-| 对话 | `Conversation` | `Turn`、`ConversationSummary`、供应商会话映射 | 会话模块 |
+| 身份 | `User` | `LoginIdentity`、`LoginChallenge`、`UserSession`、`DeviceBinding`、偏好 | 身份与访问模块 |
+| 对话 | `Conversation` | `Turn`、`ModelResponse`、`ConversationSummary`、供应商会话映射 | 会话模块 |
 | 记忆 | `Memory` | 来源、版本、状态、可见范围 | 记忆模块 |
 | 任务 | `Task` | `TaskPlan`、`TaskStep`、`Approval`、`Execution`、`ExecutionLease`、`ArtifactRef` | 任务编排模块 |
 | 工作机 | `Workstation` | `WorkstationConnection`、`Capability`、执行租约 | 工作机网关 |
@@ -27,8 +27,10 @@
 
 ```text
 User
+ ├─ 1 LoginIdentity ── 0..* LoginChallenge
  ├─ 0..* UserSession
  ├─ 0..* Conversation ── 1..* Turn
+ │                       ├─ 0..* ModelResponse
  │                       └─ 0..* ConversationSummary
  ├─ 0..* Memory
  ├─ 0..* Task ── 1 TaskPlan ── 1..* TaskStep
@@ -46,8 +48,12 @@ User
 | 对象 | 必需语义字段 | 说明 |
 |---|---|---|
 | `User` | `id`、`status`、`locale`、`time_zone`、`created_at` | 邮箱等登录标识由身份子模型单独保存 |
+| `LoginIdentity` | `id`、`user_id`、`kind`、`normalized_value`、`status`、`created_at` | 首版 `kind` 仅允许 `email`，且部署只允许一个邮箱 |
+| `LoginChallenge` | `id`、`identity_id`、`code_digest`、`state`、`attempt_count`、`expires_at`、`consumed_at` | 原始验证码不持久化，新挑战使旧挑战失效 |
+| `UserSession` | `id`、`user_id`、`token_digest`、`last_seen_at`、`expires_at`、`absolute_expires_at`、`revoked_at` | 原始令牌只存在于安全 Cookie 中 |
 | `Conversation` | `id`、`user_id`、`mode`、`state`、`started_at`、`ended_at` | `mode` 区分文字和实时语音 |
 | `Turn` | `id`、`conversation_id`、`role`、`content_parts`、`finality`、`created_at` | 临时转写与最终轮次必须区分 |
+| `ModelResponse` | `id`、`conversation_id`、`user_turn_id`、`state`、`snapshot_text`、`snapshot_version`、`version`、`error_code`、`created_at`、`completed_at` | 保存生成状态和可恢复完整快照；单个增量不作为领域事实 |
 | `Memory` | `id`、`user_id`、`type`、`summary`、`source_ref`、`status`、`confidence` | 支持更正、废弃和删除 |
 | `Task` | `id`、`user_id`、`title`、`goal`、`state`、`plan_version`、`created_at` | 状态只由编排器改变 |
 | `TaskStep` | `id`、`task_id`、`kind`、`dependencies`、`state`、`acceptance` | 步骤 ID 在同一计划版本稳定 |
@@ -70,6 +76,8 @@ User
 7. 审批过期、被拒绝或动作范围变化后不得继续使用。
 8. 提醒触发与通知投递是两个事实，任何一方失败都不能伪造另一方成功。
 9. 内部 Job 不是领域聚合，Job 结果只能通过领域服务推动任务或提醒状态。
+10. 登录挑战成功消费、错误计数与会话创建必须原子化；同一挑战不能产生两个会话。
+11. `ModelResponse` 只有进入 `completed` 后才能关联一个最终助手轮次；服务重启不得把未完成快照提升为最终轮次。
 
 ## 数据标识规则
 
@@ -85,7 +93,6 @@ User
 
 ## 待确认点
 
-- 用户登录标识是否只支持邮箱，还是预留其他方式。
 - 对话原始内容与摘要的默认保留期。
 - 任务计划是任务聚合内部版本，还是独立聚合。
 - 产物在云端存储、本地引用和临时下载之间的默认策略。

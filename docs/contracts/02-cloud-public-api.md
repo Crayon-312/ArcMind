@@ -1,7 +1,7 @@
 # 云端公开 API 契约草案
 
 状态：draft
-最后校验日期：2026-07-30
+最后校验日期：2026-08-06
 
 ## 关系导航
 
@@ -9,6 +9,9 @@
 - 客户端边界：[手机 Web 端](../architecture/02-mobile-web.md)、[手机 Web 模块](../modules/mobile-web.md)
 - 业务来源：[实时对话与任务形成](../business/01-conversation-flow.md)、[身份与工作机绑定](../business/04-identity-and-device-flow.md)
 - 事件语义：[跨端事件契约基线](01-cross-end-events.md)
+- 身份决策：[本人优先的邮箱验证码身份基线](../decisions/0012-personal-email-otp-identity.md)
+- 事件决策：[文字闭环使用 SSE 事件通道](../decisions/0014-sse-text-event-channel.md)
+- 第一阶段机器契约：[第一阶段机器契约](04-phase-1-machine-contracts.md)
 
 ## 目标
 
@@ -28,13 +31,14 @@
 
 | 方法 | 路径 | 用途 | 状态 |
 |---|---|---|---|
-| `POST` | `/auth/registrations` | 发起邮箱注册 | draft |
-| `POST` | `/auth/registrations/{id}/verify` | 完成邮箱验证 | draft |
-| `POST` | `/auth/sessions` | 创建 Web 登录会话 | draft |
-| `DELETE` | `/auth/sessions/current` | 退出当前会话 | draft |
-| `DELETE` | `/auth/sessions` | 撤销当前用户全部 Web 会话 | draft |
-| `GET` | `/me` | 获取当前用户和基础偏好 | draft |
-| `PATCH` | `/me/preferences` | 更新时区、语言和交互偏好 | draft |
+| `POST` | `/auth/challenges` | 发起邮箱验证码挑战 | accepted |
+| `POST` | `/auth/challenges/{challenge_id}/verify` | 一次性消费验证码并创建 Web 会话 | accepted |
+| `DELETE` | `/auth/sessions/current` | 退出当前会话 | accepted |
+| `DELETE` | `/auth/sessions` | 撤销当前用户全部 Web 会话 | accepted |
+| `GET` | `/me` | 获取当前用户和基础偏好 | accepted |
+| `PATCH` | `/me/preferences` | 更新时区、语言和交互偏好 | accepted |
+
+发起挑战只接收归一化前的邮箱文本，响应始终为 `202` 和不泄露账号状态的统一摘要。验证请求只包含验证码；成功响应设置 `__Host-arcmind_session` 安全 Cookie，正文不返回会话令牌。验证码无效、过期、锁定或已消费统一使用 `AUTH_CHALLENGE_UNAVAILABLE`。
 
 ## 会话资源
 
@@ -44,10 +48,14 @@
 | `GET` | `/conversations` | 查询会话摘要列表 |
 | `GET` | `/conversations/{conversation_id}` | 获取会话详情和最终轮次 |
 | `POST` | `/conversations/{conversation_id}/turns` | 提交文字轮次 |
+| `GET` | `/responses/{response_id}/events` | 通过 SSE 接收响应快照、增量和终态 |
+| `POST` | `/responses/{response_id}/cancel` | 幂等取消生成中的响应 |
 | `POST` | `/conversations/{conversation_id}/realtime-sessions` | 创建短期实时连接引导信息 |
 | `POST` | `/conversations/{conversation_id}/end` | 结束会话并触发摘要收尾 |
 
 实时连接引导信息只能支持当前会话和短期连接，不得向浏览器暴露云端长期供应商权限。
+
+提交文字轮次成功后返回 `202`、`response_id` 和事件流地址。SSE 使用同源 Cookie 鉴权，重连读取 `Last-Event-ID`；最终轮次必须能由会话查询接口恢复，不能只存在于事件流。
 
 ## 任务与审批资源
 
@@ -104,6 +112,7 @@
 | 类别 | 示例 | 客户端处理 |
 |---|---|---|
 | 身份失效 | `AUTH_SESSION_EXPIRED` | 清理交互状态并重新登录 |
+| 验证挑战不可用 | `AUTH_CHALLENGE_UNAVAILABLE` | 受限请求新验证码，不推断具体原因 |
 | 版本冲突 | `TASK_PLAN_VERSION_CONFLICT` | 刷新真实数据后重新确认 |
 | 权限拒绝 | `ACTION_NOT_ALLOWED` | 不自动重试，展示范围 |
 | 资源离线 | `WORKSTATION_OFFLINE` | 展示等待、换设备或取消 |
@@ -112,7 +121,5 @@
 
 ## 待定项
 
-- 登录机制对应的具体请求字段。
-- 实时事件采用 WebSocket（网页套接字）还是 Server-Sent Events（服务器推送事件）。
 - 大型产物上传、下载和临时访问契约。
-- API Schema（接口模式）生成、兼容和弃用策略。
+- 任务、实时语音、工作机、提醒和记忆资源的机器契约；身份与文字闭环已由[第一阶段机器契约](04-phase-1-machine-contracts.md)定稿。

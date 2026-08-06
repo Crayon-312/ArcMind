@@ -1,7 +1,7 @@
 # 决策内容地图
 
 状态：current
-最后校验日期：2026-08-03
+最后校验日期：2026-08-06
 
 决策文档记录已经接受的重要取舍、替代方案和结果，解释当前产品与架构为什么如此设计。
 
@@ -30,6 +30,10 @@
 - [决策 0006：手机 Web 技术栈](0006-mobile-web-stack.md)
 - [决策 0008：主数据库与持久化技术栈](0008-primary-data-stack.md)
 - [决策 0009：耐久 Job 与提醒调度技术栈](0009-durable-job-stack.md)
+- [决策 0012：本人优先的邮箱验证码身份基线](0012-personal-email-otp-identity.md)
+- [决策 0013：固定公网 IP 的可信 HTTPS 基线](0013-public-ip-https.md)
+- [决策 0014：文字闭环使用 SSE 事件通道](0014-sse-text-event-channel.md)
+- [决策 0015：首个主 Agent 模型使用 DeepSeek V4 Pro](0015-first-model-provider.md)
 
 ## 关系规则
 

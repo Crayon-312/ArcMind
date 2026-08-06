@@ -1,7 +1,7 @@
 # 模块卡片：会话与实时交互
 
-状态：draft
-最后校验日期：2026-07-30
+状态：current
+最后校验日期：2026-08-06
 
 ## 关系导航
 
@@ -9,6 +9,7 @@
 - 运行时架构：[产品 Agent Runtime 协作模型](../architecture/05-agent-runtime.md)
 - 核心流程：[实时对话与任务形成](../business/01-conversation-flow.md)
 - 跨端契约：[跨端事件契约基线](../contracts/01-cross-end-events.md)、[云端公开 API 契约草案](../contracts/02-cloud-public-api.md)
+- 文字事件决策：[文字闭环使用 SSE 事件通道](../decisions/0014-sse-text-event-channel.md)
 
 ## 职责
 
@@ -37,6 +38,8 @@
 手机输入 -> 会话标准化 -> 主 Agent -> 响应事件 -> 手机播放/展示
 供应商转写 -> 最终性判断 -> Turn -> 会话摘要候选
 ```
+
+文字响应通过普通 HTTPS 创建，再由 SSE 返回快照、增量和终态。模块在 `ModelResponse` 中周期性保存可恢复完整快照和生成状态，单个增量只进入有限重放窗口，最终助手轮次单独保存；供应商流和浏览器连接都不能成为唯一事实源。
 
 ## 验证方式
 

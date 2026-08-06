@@ -1,7 +1,7 @@
 # 技术选型与决策门禁
 
 状态：current
-最后校验日期：2026-07-30
+最后校验日期：2026-08-06
 
 ## 关系导航
 
@@ -41,19 +41,22 @@
 | 数据访问与迁移 | SQLAlchemy 2.0 + psycopg 3 + Alembic | accepted | [决策 0008](../decisions/0008-primary-data-stack.md) |
 | 记忆向量索引 | 同库 pgvector，可重建且延迟启用 | accepted | [决策 0008](../decisions/0008-primary-data-stack.md) |
 | 耐久 Job 与提醒调度 | Procrastinate + PostgreSQL；领域提醒由数据库扫描生成触发实例 | accepted | [决策 0009](../decisions/0009-durable-job-stack.md) |
+| 身份实现 | 单一允许邮箱 + 6 位一次性验证码 + 服务端摘要会话 | accepted | [决策 0012](../decisions/0012-personal-email-otp-identity.md) |
+| 可信 HTTPS | 固定公网 IPv4 + Caddy + Let’s Encrypt 短期 IP 证书 | accepted | [决策 0013](../decisions/0013-public-ip-https.md) |
+| 文字事件通道 | 普通 HTTPS 控制请求 + SSE 服务端事件 | accepted | [决策 0014](../decisions/0014-sse-text-event-channel.md) |
+| 首个主 Agent 模型 | DeepSeek `deepseek-v4-pro`，经 ArcMind 适配端口接入 | accepted | [决策 0015](../decisions/0015-first-model-provider.md) |
 
 ## 现在不选的内容
 
 | 领域 | 状态 | 延期原因 | 决策时点 |
 |---|---|---|---|
 | 实时语音供应商与媒体协议 | open | 必须经过真机音质、打断、延迟和成本测试 | 文字任务闭环稳定后 |
-| 主 Agent 模型供应商 | open | LangGraph 与模型解耦，需结合国内可用性和成本选择 | 文字对话纵向切片前 |
-| 身份实现 | open | 邮箱验证、恢复、撤销和反滥用需专项设计 | 身份纵向切片前 |
-| 可信 HTTPS | open | 需要针对无域名或有域名部署做真机验证 | 身份纵向切片前 |
 | Web Push | open | 首版先使用页面内消息，浏览器推送后置 | 提醒阶段 |
 | PWA | deferred | 不阻塞页面前台通话和任务查看 | 手机闭环稳定后 |
 
 FastAPI 的进程内后台任务不能承担 ArcMind 的耐久任务队列。LangGraph 的 Checkpoint（检查点）也不能替代任务表、审计事件、提醒计划或跨设备业务事实。
+
+公网 IP 证书已完成服务器签发、TLS（传输层安全协议）和普通客户端验证，但仍需真实手机确认安全上下文、Cookie（浏览器会话凭据）和麦克风权限；该剩余验收会继续阻止第一阶段总门禁通过。DeepSeek 首个模型方向已确认，真实质量和工具调用测试在获得部署密钥后完成。
 
 首版使用 Procrastinate 处理内部短 Job（后台作业）、重试和投递，复用 PostgreSQL 而不增加 Redis 或 RabbitMQ。用户 `Task`、工作机 `ExecutionLease` 和 `Reminder` 仍由领域服务维护；远期提醒由数据库扫描生成唯一 `ReminderOccurrence`，不依赖长期队列 ETA。
 

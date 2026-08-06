@@ -1,7 +1,7 @@
 # 数据存储、事务与检索设计
 
 状态：current
-最后校验日期：2026-07-30
+最后校验日期：2026-08-06
 
 ## 关系导航
 
@@ -39,8 +39,8 @@ LangGraph 表只能由 Agent Runtime 适配器访问，Procrastinate 表只能�
 
 | 模块 | 主要表 | 阶段 | 说明 |
 |---|---|---|---|
-| 身份 | `users`、`login_identities`、`user_sessions`、`device_bindings` | 第一阶段 | 邮箱规范化、凭据与恢复细节在身份专项确定 |
-| 对话 | `conversations`、`conversation_turns`、`conversation_summaries` | 第一阶段 | 临时转写不进入最终轮次表 |
+| 身份 | `users`、`login_identities`、`login_challenges`、`user_sessions`、`device_bindings` | 第一阶段 | 挑战只存验证码摘要、尝试次数、失效和消费状态；原始验证码与会话令牌不入库 |
+| 对话 | `conversations`、`conversation_turns`、`model_responses`、`conversation_summaries` | 第一阶段 | `model_responses` 保存生成状态和周期性完整快照；单个增量与临时转写不进入最终轮次表 |
 | 任务 | `tasks`、`task_plans`、`task_steps`、`task_step_dependencies`、`task_events` | 第一阶段 | 状态、计划版本和依赖关系使用关系字段 |
 | 执行 | `executions`、`execution_leases`、`approvals`、`artifact_refs` | 任务闭环 | 每次重试是新的执行尝试 |
 | 记忆 | `memories`、`memory_revisions`、`memory_sources`、`memory_embeddings` | 记忆阶段 | 当前事实与向量索引分离 |
@@ -78,8 +78,18 @@ Procrastinate 自有表不纳入 ArcMind 领域表命名和 Repository 约定。
 4. 用户审批：校验审批范围和有效期，写审批结果、任务事件和恢复命令事件。
 5. 提醒触发：以计划与触发时间构造唯一键，创建 ReminderOccurrence（提醒实例）、Notification（通知）和 Outbox。
 6. 记忆更正：创建新修订，切换当前版本，废弃旧向量并创建重新索引事件。
+7. 消费登录挑战：锁定挑战，校验状态、过期时间与尝试次数，原子更新消费状态并创建会话；失败尝试只递增当前挑战且不得泄露允许邮箱状态。
+8. 完成模型响应：校验响应版本，将最终内容写入助手轮次，把响应切换为 `completed` 并清除非必要临时快照；任一步失败均不得出现“完成但无最终轮次”。
 
 外部 API、模型调用、对象上传和工作机命令不得在数据库事务持锁期间执行。事务只提交本地事实和待发送 Outbox，后台投递器在提交后处理外部副作用。
+
+## 第一阶段响应存储边界
+
+- `model_responses.state` 只允许 `queued`、`generating`、`completed`、`failed`、`cancelled`，并以 `version` 防止取消后的迟到增量覆盖终态。
+- 生成中按最多 500 毫秒或新增 256 字符更新 `snapshot_text` 和 `snapshot_version`；这是断线恢复输入，不是最终会话轮次。
+- SSE（服务器发送事件）的单个 `response.delta` 只保留在进程内有限重放窗口，不逐条写入 PostgreSQL（关系型数据库）；重连优先返回数据库快照，再发送窗口内更高序号事件。
+- `completed` 必须关联最终助手 `conversation_turns` 记录；`failed` 和 `cancelled` 保存稳定原因分类但不创建伪造助手轮次。
+- 服务启动恢复扫描把遗留的 `queued` 或 `generating` 响应标记为可重试失败；首版不静默续跑或自动切换模型供应商。
 
 ## 幂等、乱序与审计
 

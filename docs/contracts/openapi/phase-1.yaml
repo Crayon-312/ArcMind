@@ -1,0 +1,448 @@
+openapi: 3.1.0
+info:
+  title: ArcMind V2 Phase 1 Public API
+  version: 0.1.0
+  description: >-
+    Development contract for the first identity and text-conversation slices.
+    It is not evidence that the API has been implemented.
+servers:
+  - url: /api/v1
+security:
+  - sessionCookie: []
+paths:
+  /auth/challenges:
+    post:
+      operationId: requestAuthChallenge
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthChallengeRequest'
+      responses:
+        '202':
+          description: Request accepted without disclosing account state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthChallengeAccepted'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/challenges/{challenge_id}/verify:
+    post:
+      operationId: verifyAuthChallenge
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ChallengeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthChallengeVerification'
+      responses:
+        '200':
+          description: Challenge consumed and session created.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '400':
+          $ref: '#/components/responses/ChallengeUnavailable'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/sessions/current:
+    delete:
+      operationId: revokeCurrentSession
+      responses:
+        '204':
+          description: Current session revoked.
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+  /auth/sessions:
+    delete:
+      operationId: revokeAllSessions
+      responses:
+        '204':
+          description: All sessions revoked.
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+  /me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+  /conversations:
+    post:
+      operationId: createConversation
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreate'
+      responses:
+        '201':
+          description: Conversation created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+  /conversations/{conversation_id}:
+    get:
+      operationId: getConversation
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Conversation and durable final turns.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /conversations/{conversation_id}/turns:
+    post:
+      operationId: createTextTurn
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextTurnCreate'
+      responses:
+        '202':
+          description: User turn saved and response generation accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseAccepted'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /responses/{response_id}/events:
+    get:
+      operationId: streamResponseEvents
+      parameters:
+        - $ref: '#/components/parameters/ResponseId'
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        '200':
+          description: SSE stream validated by response-event.schema.json.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /responses/{response_id}/cancel:
+    post:
+      operationId: cancelResponse
+      parameters:
+        - $ref: '#/components/parameters/ResponseId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Current response state after cancellation request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseState'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-arcmind_session
+  parameters:
+    ChallengeId:
+      name: challenge_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    ConversationId:
+      name: conversation_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    ResponseId:
+      name: response_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+  responses:
+    ChallengeUnavailable:
+      description: Challenge is invalid, expired, locked, consumed, or otherwise unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    SessionExpired:
+      description: Session is missing, expired, or revoked.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    RateLimited:
+      description: Request rate limit exceeded.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: Resource not found within the current user scope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Conflict:
+      description: Current resource version or active response conflicts with the request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+    Timestamp:
+      type: string
+      format: date-time
+    AuthChallengeRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+    AuthChallengeAccepted:
+      type: object
+      additionalProperties: false
+      required: [challenge_id, expires_in_seconds, message]
+      properties:
+        challenge_id:
+          $ref: '#/components/schemas/Uuid'
+        expires_in_seconds:
+          type: integer
+          const: 600
+        message:
+          type: string
+          maxLength: 200
+    AuthChallengeVerification:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+    CurrentUser:
+      type: object
+      additionalProperties: false
+      required: [id, status, locale, time_zone, created_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        status:
+          type: string
+          enum: [active]
+        locale:
+          type: string
+          maxLength: 35
+        time_zone:
+          type: string
+          maxLength: 64
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+    ConversationCreate:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          const: text
+    Conversation:
+      type: object
+      additionalProperties: false
+      required: [id, mode, state, created_at, version]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        mode:
+          type: string
+          enum: [text, realtime_voice]
+        state:
+          type: string
+          enum: [active, ended]
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        version:
+          type: integer
+          minimum: 1
+    TextTurnCreate:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 20000
+    Turn:
+      type: object
+      additionalProperties: false
+      required: [id, role, content, finality, created_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          minLength: 1
+          maxLength: 200000
+        finality:
+          type: string
+          enum: [final]
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+    ConversationDetail:
+      type: object
+      additionalProperties: false
+      required: [id, mode, state, created_at, version, turns]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        mode:
+          type: string
+          enum: [text, realtime_voice]
+        state:
+          type: string
+          enum: [active, ended]
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        version:
+          type: integer
+          minimum: 1
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Turn'
+    ResponseAccepted:
+      type: object
+      additionalProperties: false
+      required: [response_id, state, event_stream_url]
+      properties:
+        response_id:
+          $ref: '#/components/schemas/Uuid'
+        state:
+          type: string
+          const: queued
+        event_stream_url:
+          type: string
+          format: uri-reference
+    ResponseState:
+      type: object
+      additionalProperties: false
+      required: [response_id, state, version]
+      properties:
+        response_id:
+          $ref: '#/components/schemas/Uuid'
+        state:
+          type: string
+          enum: [queued, generating, completed, failed, cancelled]
+        version:
+          type: integer
+          minimum: 1
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, retryable, correlation_id]
+      properties:
+        code:
+          type: string
+          enum:
+            - AUTH_CHALLENGE_UNAVAILABLE
+            - AUTH_SESSION_EXPIRED
+            - RATE_LIMITED
+            - RESOURCE_NOT_FOUND
+            - RESPONSE_IN_PROGRESS
+            - MODEL_RATE_LIMITED
+            - MODEL_TIMEOUT
+            - MODEL_UNAVAILABLE
+            - RESPONSE_REPLAY_WINDOW_EXPIRED
+        message:
+          type: string
+          maxLength: 500
+        retryable:
+          type: boolean
+        retry_after_seconds:
+          type: integer
+          minimum: 1
+        correlation_id:
+          type: string
+          minLength: 8
+          maxLength: 128
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
