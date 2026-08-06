@@ -59,6 +59,12 @@
 
 该迁移只复用已签发证书，不能证明后续自动续期可用。ACME 的 `http-01` 和 `tls-alpn-01` 校验仍要求认证机构访问公网 80 或 443；只开放 18443 时，当前独立 Caddy 容器没有可完成的自动续期路径。必须在证书到期前确定新的签发与续期方案，不能依赖现状长期运行。
 
+### 高位端口续期结论
+
+Let’s Encrypt 官方资料确认，IP 地址证书只支持 `http-01` 和 `tls-alpn-01`，不支持 `dns-01`；`http-01` 只能在公网 80 完成，`tls-alpn-01` 只能在公网 443 完成，ACME 不允许把校验改到任意高位端口。因此“只有公网 IP、ArcMind 只开放 18443、ArcMind 不使用共享 VPS 的 80/443”三个约束同时成立时，当前公开 IP 证书不存在可自动续期的协议路径。
+
+可继续评估但尚未选定的生产路径只有：使用域名并通过 DNS 服务商 API 自动完成域名证书的 `dns-01` 校验，ArcMind 仍服务于 18443；使用允许 ArcMind 独占 80/443 的独立服务器或独立公网 IP；使用提供可信主机名的外部隧道。接入现有项目的 80/443 边缘代理已被用户明确排除，任何 Agent 不得以证书续期为理由修改该项目。
+
 ## 风险与恢复
 
 | 风险 | 控制与恢复 |
@@ -82,6 +88,7 @@
 
 - [Let’s Encrypt：IP 地址证书正式可用](https://letsencrypt.org/2026/01/15/6day-and-ip-general-availability)
 - [Let’s Encrypt：短期与 IP 地址证书设计](https://letsencrypt.org/2025/01/16/6-day-and-ip-certs/)
+- [Let’s Encrypt：ACME 校验类型与固定端口](https://letsencrypt.org/docs/challenge-types/)
 - [Caddy：Automatic HTTPS](https://caddyserver.com/docs/automatic-https)
 - [Caddy：Global options](https://caddyserver.com/docs/caddyfile/options)
 - [Caddy v2.11.4 发布页](https://github.com/caddyserver/caddy/releases/tag/v2.11.4)
