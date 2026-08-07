@@ -85,13 +85,13 @@
 | 范围 | 状态 | 证据或缺口 |
 |---|---|---|
 | 自动化门禁 | 通过（`passed`） | GitHub Actions 在提交 `0a1882f` 上通过契约生成、ESLint、TypeScript、Vitest、Vite 构建、Ruff、Pyright 和 7 个后端测试，并成功发布 API 与 Web 镜像 |
-| ID-007、ID-008 | 通过（`passed`） | 部署态 Chrome 完成验证码登录、会话 Cookie、退出和返回登录页；退出后只发生一次预期 `/api/v1/me` 401，没有重复请求循环 |
-| TXT-002、TXT-004 | 通过（`passed`） | 部署态收到 `response.started`、`response.snapshot`、`response.completed`，首条回复渲染成功；刷新后最终用户与助手轮次从 PostgreSQL 恢复 |
-| OPS-001 | 部分证据（`partial`） | 独立 VPS 已取得包含目标 IP SAN 的 Let’s Encrypt 证书，内部 HTTPS 和经 SSH 隧道的真实 Chrome 返回 HTTP 200；公网 `80` 可达，但腾讯云安全组仍阻断公网 TCP `443` |
+| ID-007、ID-008 | 通过（`passed`） | 公网部署态 Chrome 完成验证码登录、会话 Cookie、退出和返回登录页；退出后只发生一次预期 `/api/v1/me` 401，没有重复请求循环 |
+| TXT-002、TXT-004 | 通过（`passed`） | 公网部署态收到 `response.started`、`response.snapshot`、`response.completed`，首条回复渲染成功；刷新后最终用户与助手轮次从 PostgreSQL 恢复 |
+| OPS-001 | 通过（`passed`） | 独立 VPS 已取得包含目标 IP SAN 的 Let’s Encrypt 证书；公网 TCP `443`、可信 HTTPS、HTTP 200 和健康接口均通过 |
 | OPS-002 | 通过（`passed`） | 独立 VPS 上无 SNI 客户端取得同一可信 IP 证书，证明 `default_sni` 当前生效 |
 | OPS-003 | 部分证据（`partial`） | Caddy 数据和配置使用持久卷，整栈重启后恢复通过；实际自动续期和低于 48 小时告警仍待验证 |
-| OPS-004 | 通过（`passed`） | 经 Caddy 的部署态浏览器收到完整 SSE 事件并持久化最终回复，刷新后可恢复 |
-| OPS-005、OPS-006 | 等待验收（`pending`） | Chrome 桌面与 `390×844` 移动视口无水平溢出、无控制台错误；旧隔离验证曾通过虚拟麦克风和用户设备权限提示，但独立 VPS 的公网 `443` 与真实手机环境仍待验收 |
+| OPS-004 | 通过（`passed`） | 公网经 Caddy 的部署态浏览器收到完整 SSE 事件并持久化最终回复，刷新后可恢复 |
+| OPS-005、OPS-006 | 等待验收（`pending`） | 公网 Chrome 桌面与 `390×844` 移动视口无水平溢出、无控制台错误；旧隔离验证曾通过虚拟麦克风和用户设备权限提示，但独立 VPS 的真实手机环境仍待验收 |
 | 其他边界用例 | 尚未执行（`not_run`） | 并发消费、完整限速、断线序号缺口、取消、重放窗口过期、模型故障、越权和真实供应商仍需后续专项测试 |
 
 状态只允许通过（`passed`）、部分证据（`partial`）、等待外部验收（`pending`）、尚未执行（`not_run`）或失败（`failed`）。测试报告必须记录命令、环境、时间和失败证据；不能只填写状态。

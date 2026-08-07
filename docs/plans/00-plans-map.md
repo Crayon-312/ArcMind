@@ -21,11 +21,11 @@
 - [耐久 Job 与提醒调度](0006-durable-jobs-and-scheduling.md)
 - [Obsidian 知识库与任务隔离](0007-obsidian-task-isolation.md)
 - [知识关系重构](0008-knowledge-relationship-reconstruction.md)
+- [ArcMind V2 首个运行时纵向切片与永久服务器发布](0011-first-runtime-slice.md)（已完成，`done`；公网身份与文字闭环已验收）
 
 ## 当前台账
 
 - [第一阶段开发入口门禁](0009-phase-1-entry-gate.md)（执行中，`active`；等待独立 VPS 公网 443、真实手机、模型、证书续期和告警证据）
-- [ArcMind V2 首个运行时纵向切片与永久服务器发布](0011-first-runtime-slice.md)（执行中，`active`；首轮运行时已部署，等待腾讯云安全组开放公网 TCP 443 后完成外部验收）
 
 ## 已替代台账
 

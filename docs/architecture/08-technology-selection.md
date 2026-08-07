@@ -56,7 +56,7 @@
 
 FastAPI 的进程内后台任务不能承担 ArcMind 的耐久任务队列。LangGraph 的 Checkpoint（检查点）也不能替代任务表、审计事件、提醒计划或跨设备业务事实。
 
-公网 IP 证书、`default_sni` 和 Caddy 的技术路径已经验证，ArcMind 也已迁移到独占公网 80/443 的独立 VPS；主机内部 HTTPS 和真实 Chrome 浏览器链路通过。腾讯云安全组目前仍阻断公网 TCP 443，且真实手机、一次实际自动续期和告警尚未验收，因此第一阶段总门禁仍未通过。DeepSeek 首个模型方向已确认，真实质量和工具调用测试在获得部署密钥后完成。
+公网 IP 证书、`default_sni` 和 Caddy 的技术路径已经验证，ArcMind 也已迁移到独占公网 80/443 的独立 VPS；公网 HTTPS 和真实 Chrome 浏览器链路通过。真实手机、一次实际自动续期和告警尚未验收，因此第一阶段总门禁仍未通过。DeepSeek 首个模型方向已确认，真实质量和工具调用测试在获得部署密钥后完成。
 
 首版使用 Procrastinate 处理内部短 Job（后台作业）、重试和投递，复用 PostgreSQL 而不增加 Redis 或 RabbitMQ。用户 `Task`、工作机 `ExecutionLease` 和 `Reminder` 仍由领域服务维护；远期提醒由数据库扫描生成唯一 `ReminderOccurrence`，不依赖长期队列 ETA。
 
