@@ -6,13 +6,13 @@
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #0f172a; /* Dark background for 3D visual */
+  background-color: #030607;
   margin: 0;
   height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  color: #f1f5f9;
+  color: #e8f6ff;
 }
 
 * { box-sizing: border-box; }
@@ -38,58 +38,68 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 }
 .identity-panel {
   width: min(100%, 420px);
-  padding: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: 32px;
+  border: 1px solid rgba(170, 232, 255, 0.12);
+  border-radius: 20px;
+  background: linear-gradient(140deg, rgba(9, 20, 28, 0.58), rgba(3, 8, 13, 0.34));
+  backdrop-filter: blur(18px) saturate(1.75) brightness(1.08);
+  box-shadow: 0 22px 64px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 0 18px rgba(255, 255, 255, 0.045);
 }
 .brand-row { display: flex; align-items: center; gap: 11px; }
 .brand-row > div:last-child { display: grid; gap: 1px; }
-.brand-row strong { font-size: 16px; color: #fff; }
-.brand-row span { color: #94a3b8; font-size: 12px; }
+.brand-row strong { font-size: 16px; color: #e8f6ff; }
+.brand-row span { color: #7fd8ff; font-size: 12px; opacity: 0.8; }
 .brand-mark {
   display: grid;
   width: 34px;
   height: 34px;
   place-items: center;
   border-radius: 7px;
-  background: linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%);
-  color: white;
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.8) 0%, rgba(127, 216, 255, 0.8) 100%);
+  color: #030607;
   font-weight: 750;
 }
 .auth-copy { margin: 46px 0 30px; }
-.auth-copy svg { color: #60a5fa; }
-.auth-copy h1 { margin: 16px 0 8px; font-size: 26px; line-height: 1.2; color: #fff; }
-.auth-copy p { margin: 0; color: #94a3b8; font-size: 14px; line-height: 1.65; }
-.auth-form { display: grid; gap: 14px; }
-.auth-form label { display: grid; gap: 7px; }
-.auth-form label span { color: #cbd5e1; font-size: 13px; font-weight: 650; }
+.auth-copy h1 { margin: 16px 0 8px; font-size: 26px; line-height: 1.2; color: #e8f6ff; font-weight: 600; }
+.auth-copy p { margin: 0; color: rgba(210, 230, 240, 0.64); font-size: 14px; line-height: 1.65; }
+.auth-form { display: grid; gap: 16px; }
+.auth-form label { display: grid; gap: 8px; }
+.auth-form label span { color: #7fd8ff; font-size: 13px; font-weight: 500; opacity: 0.9; }
 .auth-form input {
   width: 100%;
-  height: 46px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  padding: 0 13px;
+  height: 48px;
+  border: 1px solid rgba(160, 224, 255, 0.16);
+  border-radius: 10px;
+  padding: 0 14px;
   outline: none;
-  background: rgba(15, 23, 42, 0.5);
-  color: #fff;
+  background: rgba(5, 11, 16, 0.45);
+  color: #e8f6ff;
+  transition: all 0.2s;
 }
-.auth-form input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+.auth-form input:focus {
+  border-color: rgba(0, 245, 212, 0.46);
+  background: rgba(8, 15, 22, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 245, 212, 0.2);
+}
+.auth-form input::placeholder { color: rgba(210, 230, 240, 0.3); }
 .primary-button {
   display: flex;
-  min-height: 46px;
+  min-height: 48px;
   align-items: center;
   justify-content: center;
   gap: 9px;
-  border: 0;
-  border-radius: 8px;
-  background: #3b82f6;
-  color: #fff;
-  font-weight: 700;
+  border: 1px solid rgba(170, 232, 255, 0.22);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  color: #00f5d4;
+  font-weight: 600;
+  transition: all 0.2s;
 }
-.primary-button:hover:not(:disabled) { background: #2563eb; }
+.primary-button:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(0, 245, 212, 0.12), rgba(0, 245, 212, 0.04));
+  border-color: rgba(0, 245, 212, 0.46);
+  text-shadow: 0 0 8px rgba(0, 245, 212, 0.4);
+}
 .text-button { border: 0; background: transparent; color: #60a5fa; font-size: 13px; }
 .error-text { margin: 0; color: #f87171; font-size: 13px; line-height: 1.5; }
 
