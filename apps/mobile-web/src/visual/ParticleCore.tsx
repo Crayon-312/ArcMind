@@ -52,7 +52,7 @@ function rotatePoint(
 ): [number, number, number] {
   const cosX = Math.cos(rx);
   const sinX = Math.sin(rx);
-  let nextY = y * cosX - z * sinX;
+  const nextY = y * cosX - z * sinX;
   let nextZ = y * sinX + z * cosX;
   let nextX = x;
 

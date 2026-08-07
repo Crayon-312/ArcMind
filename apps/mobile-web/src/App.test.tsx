@@ -43,6 +43,10 @@ vi.mock("./api", async () => {
   };
 });
 
+vi.mock("./visual/ParticleCore", () => ({
+  ParticleCore: () => <div data-testid="particle-core" />,
+}));
+
 class FakeEventSource {
   static latest: FakeEventSource | null = null;
   readonly listeners = new Map<string, (event: MessageEvent<string>) => void>();
@@ -114,7 +118,7 @@ describe("App", () => {
         <App />
       </QueryClientProvider>,
     );
-    expect(await screen.findByRole("heading", { name: "验证你的邮箱" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "欢迎回来" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "发送验证码" })).toBeEnabled();
   });
 
@@ -129,7 +133,7 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "退出登录" }));
 
-    expect(await screen.findByRole("heading", { name: "验证你的邮箱" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "欢迎回来" })).toBeInTheDocument();
   });
 
   it("applies deltas, replaces with snapshots, and can cancel generation", async () => {
