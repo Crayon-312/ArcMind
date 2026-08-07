@@ -121,12 +121,14 @@ services:
       - "127.0.0.1:8025:8025"
     networks:
       - backend
+      - management
     logging: *default-logging
 
 networks:
   edge:
   backend:
     internal: true
+  management:
 
 volumes:
   caddy-config:
