@@ -4,6 +4,7 @@ on:
   push:
     branches: [v2]
     paths:
+      - ".dockerignore"
       - ".github/workflows/runtime-images.yml"
       - "apps/**"
       - "docs/contracts/**"
