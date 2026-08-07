@@ -170,7 +170,7 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
     onSuccess: onLoggedOut,
   });
 
-  const listen = (eventUrl: string) => {
+  const listen = (eventUrl: string, activeConversationId: string) => {
     setIsResponding(true);
     const source = new EventSource(eventUrl, { withCredentials: true });
     source.addEventListener("response.snapshot", (rawEvent) => {
@@ -181,7 +181,7 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
       source.close();
       setStreaming("");
       setIsResponding(false);
-      void queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
+      void queryClient.invalidateQueries({ queryKey: ["conversation", activeConversationId] });
     });
     source.onerror = () => {
       source.close();
@@ -206,7 +206,7 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
       setDraft("");
       const accepted = await api.sendTurn(activeId, content);
       await queryClient.invalidateQueries({ queryKey: ["conversation", activeId] });
-      listen(accepted.event_stream_url);
+      listen(accepted.event_stream_url, activeId);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "发送失败，请重试。");
     }
@@ -275,7 +275,8 @@ export function App() {
     <ChatScreen
       onLoggedOut={() => {
         sessionStorage.removeItem("arcmind-conversation");
-        queryClient.clear();
+        queryClient.removeQueries({ queryKey: ["conversation"] });
+        void queryClient.resetQueries({ queryKey: ["me"] });
       }}
     />
   );
