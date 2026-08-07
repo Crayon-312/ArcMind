@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the ArcMind certificate lifetime check daily
+
+[Timer]
+OnCalendar=*-*-* 06:15:00 UTC
+RandomizedDelaySec=15m
+Persistent=true
+Unit=arcmind-certificate-check.service
+
+[Install]
+WantedBy=timers.target

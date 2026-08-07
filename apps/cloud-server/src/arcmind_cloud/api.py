@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .adapters import DeterministicModelProvider, TestMailAdapter
+from .adapters import DeterministicModelProvider, SmtpMailAdapter
 from .config import Settings, get_settings
 from .database import get_session
 from .errors import ApiError
@@ -194,9 +194,9 @@ async def request_auth_challenge(
     await database.commit()
 
     try:
-        await TestMailAdapter(settings).send_login_code(email, code)
+        await SmtpMailAdapter(settings).send_login_code(email, code)
     except Exception:
-        logger.exception("test mail delivery failed", extra={"challenge_id": str(challenge_id)})
+        logger.exception("mail delivery failed", extra={"challenge_id": str(challenge_id)})
         challenge.state = "expired"
         await database.commit()
 

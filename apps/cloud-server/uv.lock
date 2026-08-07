@@ -55,6 +55,7 @@ dependencies = [
     { name = "alembic" },
     { name = "email-validator" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-settings" },
     { name = "sqlalchemy", extra = ["asyncio"] },
@@ -63,7 +64,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -75,6 +75,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.16,<2" },
     { name = "email-validator", specifier = ">=2.2,<3" },
     { name = "fastapi", specifier = ">=0.116,<1" },
+    { name = "httpx", specifier = ">=0.28,<1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
     { name = "pydantic-settings", specifier = ">=2.10,<3" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.41,<3" },
@@ -83,7 +84,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx", specifier = ">=0.28,<1" },
     { name = "pyright", specifier = ">=1.1.403,<2" },
     { name = "pytest", specifier = ">=8.4,<9" },
     { name = "pytest-asyncio", specifier = ">=1.1,<2" },

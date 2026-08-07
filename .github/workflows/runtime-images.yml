@@ -8,6 +8,7 @@ on:
       - ".github/workflows/runtime-images.yml"
       - "apps/**"
       - "docs/contracts/**"
+      - "infrastructure/cloud/**"
       - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -42,6 +43,17 @@ jobs:
         run: uv sync --frozen
       - working-directory: apps/cloud-server
         run: uv run ruff check . && uv run pyright && uv run pytest
+      - run: |
+          sh -n infrastructure/cloud/operations/*.sh
+          sudo install -d -m 755 /opt/arcmind/operations
+          sudo install -m 755 \
+            infrastructure/cloud/operations/check-certificate.sh \
+            infrastructure/cloud/operations/backup-postgres.sh \
+            /opt/arcmind/operations/
+          sudo touch /opt/arcmind/.env
+          systemd-analyze verify \
+            infrastructure/cloud/systemd/*.service \
+            infrastructure/cloud/systemd/*.timer
 
   images:
     needs: checks

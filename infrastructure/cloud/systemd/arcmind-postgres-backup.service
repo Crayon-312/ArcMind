@@ -1,0 +1,14 @@
+[Unit]
+Description=Create and validate the ArcMind PostgreSQL backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/arcmind/operations/backup-postgres.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+ProtectHome=true
+UMask=0077
