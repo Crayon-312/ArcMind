@@ -20,6 +20,9 @@ def settings(**overrides: object) -> Settings:
         "public_origin": "https://127.0.0.1",
         "allowed_email": "owner@example.invalid",
         "proof_secret": SecretStr("a" * 32),
+        "smtp_host": "mailpit",
+        "smtp_port": 1025,
+        "smtp_timeout_seconds": 10,
     }
     values.update(overrides)
     return Settings(**values)  # pyright: ignore[reportArgumentType]

@@ -41,3 +41,8 @@ def test_invalid_smtp_security_configuration_fails_at_startup(
 def test_deepseek_endpoint_requires_https() -> None:
     with pytest.raises(ValidationError):
         settings(deepseek_base_url="http://api.deepseek.example")
+
+
+def test_unknown_environment_fails_at_startup() -> None:
+    with pytest.raises(ValidationError):
+        settings(environment="prod")

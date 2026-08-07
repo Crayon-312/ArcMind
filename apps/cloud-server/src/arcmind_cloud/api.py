@@ -102,6 +102,12 @@ def source_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def select_challenge_code(settings: Settings) -> tuple[str, bool]:
+    if settings.environment == "development":
+        return "123456", False
+    return generate_code(), True
+
+
 async def authenticate_session(
     database: AsyncSession,
     settings: Settings,
@@ -195,8 +201,7 @@ async def request_auth_challenge(
         .where(AuthChallenge.email == email, AuthChallenge.state == "pending")
         .values(state="expired")
     )
-    # FOR TESTING: bypass email sending and use a fixed code
-    code = "123456"
+    code, should_deliver = select_challenge_code(settings)
     challenge = AuthChallenge(
         id=challenge_id,
         email=email,
@@ -206,6 +211,14 @@ async def request_auth_challenge(
     )
     database.add(challenge)
     await database.commit()
+
+    if should_deliver:
+        try:
+            await SmtpMailAdapter(settings).send_login_code(email, code)
+        except Exception:
+            logger.exception("mail delivery failed", extra={"challenge_id": str(challenge_id)})
+            challenge.state = "expired"
+            await database.commit()
 
     return accepted
 
