@@ -86,17 +86,17 @@
 
 | 范围 | 状态 | 证据或缺口 |
 |---|---|---|
-| 自动化门禁 | 通过（`passed`） | GitHub Actions 在提交 `0a1882f` 上通过契约生成、ESLint、TypeScript、Vitest、Vite 构建、Ruff、Pyright 和 7 个后端测试，并成功发布 API 与 Web 镜像 |
-| TXT-001、TXT-005、TXT-008、TXT-009、TXT-011 | 通过（`passed`） | ArcMind 新 VPS 的隔离 PostgreSQL 18 临时实例完成 5 项耐久生成集成测试：同事务入队回滚、Worker 增量与最终轮次、供应商失败、遗留生成恢复和取消幂等均通过；多 Worker 竞争和正常停止另行实测通过。首次生产迁移发现旧 ORM 时间倒序后，改为按会话内稳定序号回填；两组旧顺序数据的升级、降级和再次升级专项测试通过 |
+| 自动化门禁 | 通过（`passed`） | GitHub Actions 工作流 `31165373341` 在提交 `60d8856` 上通过锁文件安装、契约生成、ESLint、TypeScript、Vitest、Vite 构建、Ruff、Pyright、23 个后端测试和 PostgreSQL 迁移，并成功发布 API 与 Web 镜像 |
+| TXT-001、TXT-005、TXT-008、TXT-009、TXT-011 | 通过（`passed`） | ArcMind 新 VPS 的隔离 PostgreSQL 18 临时实例完成 5 项耐久生成集成测试：同事务入队回滚、Worker 增量与最终轮次、供应商失败、遗留生成恢复和取消幂等均通过；多 Worker 竞争和正常停止另行实测通过。首次生产迁移发现旧 ORM 时间倒序后，改为按会话内稳定序号回填；两组旧顺序数据的升级、降级和再次升级专项测试通过。最终生产迁移后 8 条旧响应全部关联，部署态立即取消只形成一个取消终态且没有迟到完成 |
 | ID-007、ID-008 | 通过（`passed`） | 公网部署态 Chrome 完成验证码登录、会话 Cookie、退出和返回登录页；退出后只发生一次预期 `/api/v1/me` 401，没有重复请求循环 |
-| TXT-002、TXT-004 | 通过（`passed`） | 公网部署态收到 `response.started`、`response.snapshot`、`response.completed`，首条回复渲染成功；刷新后最终用户与助手轮次从 PostgreSQL 恢复 |
+| TXT-002、TXT-004、TXT-006 | 通过（`passed`） | 最终镜像的公网部署态收到 5 个 `response.delta`、2 个 `response.snapshot` 和 1 个 `response.completed`；携带旧事件 ID 重连后先收到权威快照再收到完成事件，刷新查询从 PostgreSQL 恢复用户与最终助手轮次 |
 | OPS-001 | 通过（`passed`） | 独立 VPS 已取得包含目标 IP SAN 的 Let’s Encrypt 证书；公网 TCP `443`、可信 HTTPS、HTTP 200 和健康接口均通过 |
 | OPS-002 | 通过（`passed`） | 独立 VPS 上无 SNI 客户端取得同一可信 IP 证书，证明 `default_sni` 当前生效 |
 | OPS-003 | 部分证据（`partial`） | Caddy 数据和配置使用持久卷，整栈重启后恢复通过；每日 systemd 检查已启用，48 小时真实阈值通过、1000 小时模拟阈值按预期失败。实际自动续期和外部告警送达仍待验证 |
-| OPS-004 | 通过（`passed`） | 公网经 Caddy 的部署态浏览器收到完整 SSE 事件并持久化最终回复，刷新后可恢复 |
+| OPS-004 | 通过（`passed`） | 公网经 Caddy 的最终部署态 HTTP 流收到完整 SSE 增量、快照和完成事件，携带旧游标重连成功，最终回复持久化且刷新后可恢复 |
 | OPS-005、OPS-006 | 等待验收（`pending`） | 公网 Chrome 桌面与 `390×844` 移动视口无水平溢出、无控制台错误；旧隔离验证曾通过虚拟麦克风和用户设备权限提示，但独立 VPS 的真实手机环境仍待验收 |
 | OPS-007 | 通过（`passed`） | 每日 systemd 备份已启用并手动执行；生产 `pg_dump -Fc` 产物权限为 `600`，结构检查通过，空文件负向检查失败 |
 | OPS-008 | 等待外部验收（`pending`） | 当前只有 VPS 本机备份；对象存储凭据、加密异地复制、最终保留策略和独立临时数据库实际恢复尚未完成 |
-| 其他边界用例 | 尚未执行（`not_run`） | 完整限速、断线序号缺口、重放窗口过期、越权、真实 DeepSeek 和真实 SMTP 仍需后续专项测试 |
+| 其他边界用例 | 尚未执行（`not_run`） | 完整限速、事件序号缺口、重放窗口过期、越权、真实 DeepSeek 和真实 SMTP 仍需后续专项测试 |
 
 状态只允许通过（`passed`）、部分证据（`partial`）、等待外部验收（`pending`）、尚未执行（`not_run`）或失败（`failed`）。测试报告必须记录命令、环境、时间和失败证据；不能只填写状态。
