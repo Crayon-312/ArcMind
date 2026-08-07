@@ -24,12 +24,12 @@
 
 ## 当前台账
 
-- [第一阶段开发入口门禁](0009-phase-1-entry-gate.md)（执行中，`active`；等待手机、模型、高位公网端口续期方案和告警证据）
-- [ArcMind V2 首个运行时纵向切片与永久服务器发布](0011-first-runtime-slice.md)（执行中，`active`；实现身份、文字对话和新 VPS 首轮发布）
+- [第一阶段开发入口门禁](0009-phase-1-entry-gate.md)（执行中，`active`；等待独立 VPS 公网 443、真实手机、模型、证书续期和告警证据）
+- [ArcMind V2 首个运行时纵向切片与永久服务器发布](0011-first-runtime-slice.md)（执行中，`active`；首轮运行时已部署，等待腾讯云安全组开放公网 TCP 443 后完成外部验收）
 
-## 草稿台账
+## 已替代台账
 
-- [ArcMind 独立 VPS 部署与 HTTPS 迁移](0010-dedicated-vps-deployment.md)（草稿，`draft`；已完成空主机核验，后续基础设施实施由 0011 统一管理）
+- [ArcMind 独立 VPS 部署与 HTTPS 迁移](0010-dedicated-vps-deployment.md)（已替代，`superseded`；前置核验和范围纠偏历史由 0011 接续）
 
 ## 使用规则
 

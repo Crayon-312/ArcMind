@@ -1,13 +1,18 @@
 ---
 type: task-capsule
-status: draft
+status: superseded
 task_id: "0010"
+superseded_by: "0011"
 created: 2026-08-06
 updated: 2026-08-07
 change_level: S3
 ---
 
 # 方案落实台账：ArcMind 独立 VPS 部署与 HTTPS 迁移
+
+## 当前结论
+
+本草稿原先只覆盖独立 VPS（虚拟专用服务器）的 HTTPS（安全超文本传输协议）验证页，与用户后来确认的“部署完整 ArcMind 首个纵向切片”目标不一致。2026-08-07 起，本任务由[任务舱 0011](0011-first-runtime-slice.md)完整替代；本文件只保留前置核验与范围纠偏历史，不得继续作为实施清单。
 
 ## 关系导航
 
