@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type { JSX } from 'react';
 import * as THREE from 'three';
 import { resolveVisualPerformanceProfile } from './performance';
 import type { CoreMode, VisualSignal } from './state';
