@@ -53,6 +53,7 @@ services:
       ARCMIND_DEEPSEEK_BASE_URL: ${ARCMIND_DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       ARCMIND_DEEPSEEK_MODEL: ${ARCMIND_DEEPSEEK_MODEL:-deepseek-v4-pro}
       ARCMIND_DEEPSEEK_TIMEOUT_SECONDS: ${ARCMIND_DEEPSEEK_TIMEOUT_SECONDS:-60}
+      ARCMIND_DETERMINISTIC_CHUNK_DELAY_SECONDS: ${ARCMIND_DETERMINISTIC_CHUNK_DELAY_SECONDS:-0.15}
       ARCMIND_ENVIRONMENT: staging
       ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
       ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
@@ -81,6 +82,37 @@ services:
       retries: 12
     logging: *default-logging
 
+  worker:
+    image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      ARCMIND_ALLOWED_EMAIL: ${ARCMIND_ALLOWED_EMAIL:?set ARCMIND_ALLOWED_EMAIL}
+      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/arcmind
+      ARCMIND_DEEPSEEK_API_KEY: ${ARCMIND_DEEPSEEK_API_KEY:-}
+      ARCMIND_DEEPSEEK_BASE_URL: ${ARCMIND_DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      ARCMIND_DEEPSEEK_MODEL: ${ARCMIND_DEEPSEEK_MODEL:-deepseek-v4-pro}
+      ARCMIND_DEEPSEEK_TIMEOUT_SECONDS: ${ARCMIND_DEEPSEEK_TIMEOUT_SECONDS:-60}
+      ARCMIND_DETERMINISTIC_CHUNK_DELAY_SECONDS: ${ARCMIND_DETERMINISTIC_CHUNK_DELAY_SECONDS:-0.15}
+      ARCMIND_ENVIRONMENT: staging
+      ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
+      ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
+    command: ["python", "-m", "arcmind_cloud.worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - from pathlib import Path; assert b'arcmind_cloud.worker' in Path('/proc/1/cmdline').read_bytes()
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    logging: *default-logging
+
   migrate:
     image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
     profiles: ["migration"]
@@ -90,6 +122,21 @@ services:
       ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
       ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
     command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+
+  queue-migrate:
+    image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
+    profiles: ["migration"]
+    environment:
+      ARCMIND_ALLOWED_EMAIL: ${ARCMIND_ALLOWED_EMAIL:?set ARCMIND_ALLOWED_EMAIL}
+      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/arcmind
+      ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
+      ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
+    command: ["python", "-m", "arcmind_cloud.queue_schema"]
     depends_on:
       postgres:
         condition: service_healthy

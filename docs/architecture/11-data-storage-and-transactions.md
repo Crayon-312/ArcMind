@@ -1,7 +1,7 @@
 # 数据存储、事务与检索设计
 
 状态：current
-最后校验日期：2026-08-06
+最后校验日期：2026-08-07
 
 ## 关系导航
 
@@ -79,17 +79,18 @@ Procrastinate 自有表不纳入 ArcMind 领域表命名和 Repository 约定。
 5. 提醒触发：以计划与触发时间构造唯一键，创建 ReminderOccurrence（提醒实例）、Notification（通知）和 Outbox。
 6. 记忆更正：创建新修订，切换当前版本，废弃旧向量并创建重新索引事件。
 7. 消费登录挑战：锁定挑战，校验状态、过期时间与尝试次数，原子更新消费状态并创建会话；失败尝试只递增当前挑战且不得泄露允许邮箱状态。
-8. 完成模型响应：校验响应版本，将最终内容写入助手轮次，把响应切换为 `completed` 并清除非必要临时快照；任一步失败均不得出现“完成但无最终轮次”。
+8. 接受模型响应：写入用户轮次和 `assistant_responses`，并通过同一 psycopg 连接把生成 Job 写入 Procrastinate 自有表；任一步失败必须整体回滚。
+9. 完成模型响应：锁定响应并校验状态，将最终内容写入助手轮次，把响应切换为 `completed` 并追加完成事件；任一步失败均不得出现“完成但无最终轮次”。
 
 外部 API、模型调用、对象上传和工作机命令不得在数据库事务持锁期间执行。事务只提交本地事实和待发送 Outbox，后台投递器在提交后处理外部副作用。
 
 ## 第一阶段响应存储边界
 
-- `model_responses.state` 只允许 `queued`、`generating`、`completed`、`failed`、`cancelled`，并以 `version` 防止取消后的迟到增量覆盖终态。
-- 生成中按最多 500 毫秒或新增 256 字符更新 `snapshot_text` 和 `snapshot_version`；这是断线恢复输入，不是最终会话轮次。
-- SSE（服务器发送事件）的单个 `response.delta` 只保留在进程内有限重放窗口，不逐条写入 PostgreSQL（关系型数据库）；重连优先返回数据库快照，再发送窗口内更高序号事件。
-- `completed` 必须关联最终助手 `conversation_turns` 记录；`failed` 和 `cancelled` 保存稳定原因分类但不创建伪造助手轮次。
-- 服务启动恢复扫描把遗留的 `queued` 或 `generating` 响应标记为可重试失败；首版不静默续跑或自动切换模型供应商。
+- `assistant_responses.state` 只允许 `queued`、`generating`、`completed`、`failed`、`cancelled`，并以行锁、终态检查和 `version` 防止取消后的迟到增量覆盖终态。
+- 生成中按最多 500 毫秒或新增 256 字符追加完整 `response.snapshot`，同时更新 `snapshot_text`；这是断线恢复输入，不是最终会话轮次。
+- `response.started`、`response.delta`、`response.snapshot` 和终态事件作为有序投递记录写入 `response_events`。增量耐久化用于重连和诊断，不把单个增量提升为会话事实；事件保留与清理策略仍需单独定稿。
+- `completed` 必须原子创建一个最终助手 `turns` 记录；`failed` 和 `cancelled` 保存稳定原因分类但不创建伪造助手轮次。
+- Worker 重新领取遗留 `generating` 响应时将其标记为 `GENERATION_INTERRUPTED` 可重试失败；首版不静默续跑或自动切换模型供应商。
 
 ## 幂等、乱序与审计
 

@@ -1,6 +1,9 @@
+import asyncio
 import json
 import logging
+import time
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import UTC, timedelta
 from typing import Annotated
@@ -10,10 +13,12 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .adapters import DeterministicModelProvider, SmtpMailAdapter
+from .adapters import SmtpMailAdapter
 from .config import Settings, get_settings
-from .database import get_session
+from .database import get_session, session_factory
 from .errors import ApiError
+from .generation import add_event
+from .jobs import cancel_response_job, enqueue_response
 from .models import (
     AssistantResponse,
     AuthChallenge,
@@ -97,10 +102,10 @@ def source_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-async def require_auth(
-    database: DatabaseSession,
-    settings: SettingsDependency,
-    token: Annotated[str | None, Cookie(alias="__Host-arcmind_session")] = None,
+async def authenticate_session(
+    database: AsyncSession,
+    settings: Settings,
+    token: str | None,
 ) -> AuthContext:
     if not token:
         raise ApiError(401, "AUTH_SESSION_EXPIRED", "登录会话已失效，请重新验证邮箱。")
@@ -130,6 +135,14 @@ async def require_auth(
     auth_session.last_seen_at = now
     await database.commit()
     return AuthContext(user=user, session=auth_session)
+
+
+async def require_auth(
+    database: DatabaseSession,
+    settings: SettingsDependency,
+    token: Annotated[str | None, Cookie(alias="__Host-arcmind_session")] = None,
+) -> AuthContext:
+    return await authenticate_session(database, settings, token)
 
 
 Auth = Annotated[AuthContext, Depends(require_auth)]
@@ -418,58 +431,50 @@ async def create_text_turn(
         role="user",
         content=payload.content,
     )
+    database.add(user_turn)
+    await database.flush()
     assistant_response = AssistantResponse(
         conversation_id=conversation.id,
         user_id=auth.user.id,
+        user_turn_id=user_turn.id,
         idempotency_key=idempotency_key,
     )
-    database.add_all([user_turn, assistant_response])
+    database.add(assistant_response)
     await database.flush()
-    started_at = utc_now()
-    database.add(
-        ResponseEvent(
-            response_id=assistant_response.id,
-            sequence=1,
-            event_type="response.started",
-            payload={},
-            occurred_at=started_at,
+    try:
+        assistant_response.job_id = await enqueue_response(database, assistant_response.id)
+    except Exception as error:
+        await database.rollback()
+        logger.exception(
+            "response enqueue failed",
+            extra={"response_id": str(assistant_response.id)},
         )
-    )
-    assistant_response.state = "generating"
-
-    reply = await DeterministicModelProvider().generate(payload.content)
-    assistant_response.snapshot_text = reply
-    database.add(
-        ResponseEvent(
-            response_id=assistant_response.id,
-            sequence=2,
-            event_type="response.snapshot",
-            payload={"text": reply, "snapshot_version": 1},
-        )
-    )
-    assistant_turn = TurnModel(
-        conversation_id=conversation.id,
-        role="assistant",
-        content=reply,
-    )
-    database.add(assistant_turn)
-    await database.flush()
-    assistant_response.state = "completed"
-    assistant_response.version = 2
-    assistant_response.completed_at = utc_now()
-    conversation.version += 1
-    database.add(
-        ResponseEvent(
-            response_id=assistant_response.id,
-            sequence=3,
-            event_type="response.completed",
-            payload={"turn_id": str(assistant_turn.id), "response_version": 2},
-        )
-    )
+        raise ApiError(
+            503,
+            "QUEUE_UNAVAILABLE",
+            "回复服务暂时不可用，请稍后重试。",
+            retryable=True,
+        ) from error
     await database.commit()
     return ResponseAccepted(
         response_id=assistant_response.id,
         event_stream_url=f"/api/v1/responses/{assistant_response.id}/events",
+    )
+
+
+def response_event_text(event: ResponseEvent) -> str:
+    envelope = {
+        "event_id": str(event.id),
+        "event_type": event.event_type,
+        "response_id": str(event.response_id),
+        "sequence": event.sequence,
+        "occurred_at": event.occurred_at.astimezone(UTC).isoformat(),
+        "payload": event.payload,
+    }
+    return (
+        f"id: {event.id}\n"
+        f"event: {event.event_type}\n"
+        f"data: {json.dumps(envelope, ensure_ascii=False)}\n\n"
     )
 
 
@@ -479,49 +484,109 @@ async def create_text_turn(
 )
 async def stream_response_events(
     response_id: uuid.UUID,
-    database: DatabaseSession,
-    auth: Auth,
+    settings: SettingsDependency,
+    token: Annotated[str | None, Cookie(alias="__Host-arcmind_session")] = None,
     last_event_id: Annotated[str | None, Header(alias="Last-Event-ID")] = None,
 ) -> StreamingResponse:
-    assistant_response = await database.scalar(
-        select(AssistantResponse).where(
-            AssistantResponse.id == response_id,
-            AssistantResponse.user_id == auth.user.id,
+    async with session_factory() as database:
+        auth = await authenticate_session(database, settings, token)
+        assistant_response = await database.scalar(
+            select(AssistantResponse).where(
+                AssistantResponse.id == response_id,
+                AssistantResponse.user_id == auth.user.id,
+            )
         )
-    )
     if assistant_response is None:
         raise ApiError(404, "RESOURCE_NOT_FOUND", "没有找到对应资源。")
-    events = (
-        await database.scalars(
-            select(ResponseEvent)
-            .where(ResponseEvent.response_id == response_id)
-            .order_by(ResponseEvent.sequence)
-        )
-    ).all()
+    session_id = auth.session.id
 
-    if last_event_id:
-        snapshots = [event for event in events if event.event_type == "response.snapshot"]
-        if snapshots:
-            latest_snapshot = snapshots[-1]
-            events = [latest_snapshot] + [
-                event for event in events if event.sequence > latest_snapshot.sequence
-            ]
+    async def event_stream() -> AsyncIterator[str]:
+        last_sequence = 0
+        terminal_events = {
+            "response.completed",
+            "response.failed",
+            "response.cancelled",
+        }
+        if last_event_id:
+            async with session_factory() as stream_database:
+                snapshot = await stream_database.scalar(
+                    select(ResponseEvent)
+                    .where(
+                        ResponseEvent.response_id == response_id,
+                        ResponseEvent.event_type == "response.snapshot",
+                    )
+                    .order_by(ResponseEvent.sequence.desc())
+                    .limit(1)
+                )
+                if snapshot is not None:
+                    yield response_event_text(snapshot)
+                    last_sequence = snapshot.sequence
+                else:
+                    try:
+                        cursor_id = uuid.UUID(last_event_id)
+                    except ValueError:
+                        cursor_id = None
+                    if cursor_id is not None:
+                        cursor = await stream_database.scalar(
+                            select(ResponseEvent).where(
+                                ResponseEvent.id == cursor_id,
+                                ResponseEvent.response_id == response_id,
+                            )
+                        )
+                        if cursor is not None:
+                            last_sequence = cursor.sequence
 
-    async def event_stream():  # type: ignore[no-untyped-def]
-        for event in events:
-            envelope = {
-                "event_id": str(event.id),
-                "event_type": event.event_type,
-                "response_id": str(event.response_id),
-                "sequence": event.sequence,
-                "occurred_at": event.occurred_at.astimezone(UTC).isoformat(),
-                "payload": event.payload,
-            }
-            yield (
-                f"id: {event.id}\n"
-                f"event: {event.event_type}\n"
-                f"data: {json.dumps(envelope, ensure_ascii=False)}\n\n"
-            )
+        heartbeat_at = time.monotonic()
+        while True:
+            async with session_factory() as stream_database:
+                session_state = await stream_database.scalar(
+                    select(AuthSession.state).where(AuthSession.id == session_id)
+                )
+                if session_state != "active":
+                    return
+                current_state = await stream_database.scalar(
+                    select(AssistantResponse.state).where(
+                        AssistantResponse.id == response_id
+                    )
+                )
+                events = (
+                    await stream_database.scalars(
+                        select(ResponseEvent)
+                        .where(
+                            ResponseEvent.response_id == response_id,
+                            ResponseEvent.sequence > last_sequence,
+                        )
+                        .order_by(ResponseEvent.sequence)
+                    )
+                ).all()
+
+            for event in events:
+                last_sequence = event.sequence
+                heartbeat_at = time.monotonic()
+                yield response_event_text(event)
+                if event.event_type in terminal_events:
+                    return
+
+            if not events and current_state in {"completed", "failed", "cancelled"}:
+                return
+            now = time.monotonic()
+            if now - heartbeat_at >= settings.response_heartbeat_seconds:
+                envelope = {
+                    "event_id": str(uuid.uuid4()),
+                    "event_type": "heartbeat",
+                    "response_id": str(response_id),
+                    "sequence": last_sequence,
+                    "occurred_at": utc_now().astimezone(UTC).isoformat(),
+                    "payload": {
+                        "server_time": utc_now().astimezone(UTC).isoformat(),
+                    },
+                }
+                yield (
+                    "event: heartbeat\n"
+                    f"data: {json.dumps(envelope, ensure_ascii=False)}\n\n"
+                )
+                heartbeat_at = now
+            await asyncio.sleep(settings.response_event_poll_seconds)
 
     return StreamingResponse(
         event_stream(),
@@ -557,15 +622,24 @@ async def cancel_response(
     if assistant_response.state in {"queued", "generating"}:
         assistant_response.state = "cancelled"
         assistant_response.version += 1
-        database.add(
-            ResponseEvent(
-                response_id=assistant_response.id,
-                sequence=assistant_response.version + 1,
-                event_type="response.cancelled",
-                payload={"cancelled_by": "user", "response_version": assistant_response.version},
-            )
+        await add_event(
+            database,
+            assistant_response.id,
+            "response.cancelled",
+            {
+                "cancelled_by": "user",
+                "response_version": assistant_response.version,
+            },
         )
         await database.commit()
+        if assistant_response.job_id is not None:
+            try:
+                await cancel_response_job(assistant_response.job_id)
+            except Exception:
+                logger.exception(
+                    "response job cancellation failed",
+                    extra={"response_id": str(assistant_response.id)},
+                )
     return ResponseState(
         response_id=assistant_response.id,
         state=assistant_response.state,  # type: ignore[arg-type]

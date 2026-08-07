@@ -23,6 +23,26 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: arcmind
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_USER: arcmind
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U arcmind -d arcmind"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      ARCMIND_ALLOWED_EMAIL: owner@example.invalid
+      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:test-password@127.0.0.1:5432/arcmind
+      ARCMIND_PROOF_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      ARCMIND_PUBLIC_ORIGIN: https://127.0.0.1
+      ARCMIND_RUN_DATABASE_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -41,6 +61,10 @@ jobs:
           enable-cache: true
       - working-directory: apps/cloud-server
         run: uv sync --frozen
+      - working-directory: apps/cloud-server
+        run: |
+          uv run alembic upgrade head
+          uv run python -m arcmind_cloud.queue_schema
       - working-directory: apps/cloud-server
         run: uv run ruff check . && uv run pyright && uv run pytest
       - run: |

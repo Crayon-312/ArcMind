@@ -78,4 +78,10 @@ export const api = {
       headers: { "Idempotency-Key": crypto.randomUUID() },
       body: JSON.stringify({ content }),
     }),
+  cancelResponse: (responseId: string) =>
+    request<components["schemas"]["ResponseState"]>(`/responses/${responseId}/cancel`, {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({}),
+    }),
 };

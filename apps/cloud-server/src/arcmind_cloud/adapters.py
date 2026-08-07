@@ -1,6 +1,7 @@
 import asyncio
 import smtplib
 import ssl
+from collections.abc import AsyncIterator
 from email.message import EmailMessage
 from typing import Literal
 
@@ -51,13 +52,26 @@ class SmtpMailAdapter:
 
 
 class DeterministicModelProvider:
-    async def generate(self, content: str) -> str:
+    def __init__(self, *, chunk_delay_seconds: float = 0) -> None:
+        self.chunk_delay_seconds = chunk_delay_seconds
+
+    @staticmethod
+    def response_text(content: str) -> str:
         normalized = " ".join(content.split())
         return (
             "[测试模型] 我已收到你的消息：\n\n"
             f"{normalized}\n\n"
             "当前回复用于验证 ArcMind 的身份、持久化和文字事件链路。"
         )
+
+    async def generate(self, content: str) -> str:
+        return self.response_text(content)
+
+    async def stream(self, content: str) -> AsyncIterator[str]:
+        for chunk in self.response_text(content).splitlines(keepends=True):
+            if self.chunk_delay_seconds:
+                await asyncio.sleep(self.chunk_delay_seconds)
+            yield chunk
 
 
 ModelErrorCategory = Literal[

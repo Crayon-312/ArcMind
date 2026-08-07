@@ -3,6 +3,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import (
+    BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -113,7 +115,11 @@ class Turn(Base):
 
 class AssistantResponse(Base):
     __tablename__ = "assistant_responses"
-    __table_args__ = (UniqueConstraint("user_id", "idempotency_key"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "idempotency_key"),
+        UniqueConstraint("user_turn_id"),
+        UniqueConstraint("job_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     conversation_id: Mapped[uuid.UUID] = mapped_column(
@@ -122,10 +128,16 @@ class AssistantResponse(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
+    user_turn_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("turns.id", ondelete="RESTRICT"), nullable=False
+    )
     idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    job_id: Mapped[int | None] = mapped_column(BigInteger)
     state: Mapped[str] = mapped_column(String(20), default="queued", nullable=False)
     snapshot_text: Mapped[str] = mapped_column(Text, default="", nullable=False)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    retryable: Mapped[bool | None] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, LoaderCircle, LogOut, Send, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, LoaderCircle, LogOut, Send, ShieldCheck, Square } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { api, ApiError, type ConversationDetail, type ResponseEvent } from "./api";
@@ -159,6 +159,8 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [streaming, setStreaming] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isResponding, setIsResponding] = useState(false);
+  const [responseId, setResponseId] = useState<string | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   const conversation = useQuery({
     queryKey: ["conversation", conversationId],
@@ -169,24 +171,52 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
     mutationFn: api.logout,
     onSuccess: onLoggedOut,
   });
+  const cancel = useMutation({
+    mutationFn: (activeResponseId: string) => api.cancelResponse(activeResponseId),
+    onError: (reason) =>
+      setError(reason instanceof Error ? reason.message : "停止失败，请重试。"),
+  });
+
+  useEffect(() => () => eventSourceRef.current?.close(), []);
+
+  const finishListening = (activeConversationId: string) => {
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
+    setStreaming("");
+    setIsResponding(false);
+    setResponseId(null);
+    void queryClient.invalidateQueries({ queryKey: ["conversation", activeConversationId] });
+  };
 
   const listen = (eventUrl: string, activeConversationId: string) => {
+    eventSourceRef.current?.close();
     setIsResponding(true);
     const source = new EventSource(eventUrl, { withCredentials: true });
+    eventSourceRef.current = source;
+    source.addEventListener("response.started", () => setError(null));
+    source.addEventListener("response.delta", (rawEvent) => {
+      const event = JSON.parse((rawEvent as MessageEvent<string>).data) as ResponseEvent;
+      setStreaming((current) => current + String(event.payload.text ?? ""));
+      setError(null);
+    });
     source.addEventListener("response.snapshot", (rawEvent) => {
       const event = JSON.parse((rawEvent as MessageEvent<string>).data) as ResponseEvent;
       setStreaming(String(event.payload.text ?? ""));
+      setError(null);
     });
     source.addEventListener("response.completed", () => {
-      source.close();
-      setStreaming("");
-      setIsResponding(false);
-      void queryClient.invalidateQueries({ queryKey: ["conversation", activeConversationId] });
+      finishListening(activeConversationId);
+    });
+    source.addEventListener("response.cancelled", () => {
+      finishListening(activeConversationId);
+    });
+    source.addEventListener("response.failed", (rawEvent) => {
+      const event = JSON.parse((rawEvent as MessageEvent<string>).data) as ResponseEvent;
+      finishListening(activeConversationId);
+      setError(`回复失败：${String(event.payload.error_code ?? "MODEL_UNAVAILABLE")}`);
     });
     source.onerror = () => {
-      source.close();
-      setIsResponding(false);
-      setError("事件连接中断，请刷新后查看最终结果。");
+      setError("事件连接中断，正在自动重连。");
     };
   };
 
@@ -205,6 +235,7 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
       }
       setDraft("");
       const accepted = await api.sendTurn(activeId, content);
+      setResponseId(accepted.response_id);
       await queryClient.invalidateQueries({ queryKey: ["conversation", activeId] });
       listen(accepted.event_stream_url, activeId);
     } catch (reason) {
@@ -245,14 +276,27 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
               }
             }}
           />
-          <button className="send-button" disabled={!draft.trim() || isResponding} title="发送">
-            {isResponding ? (
-              <LoaderCircle className="spin" size={20} aria-hidden="true" />
-            ) : (
+          {isResponding && responseId ? (
+            <button
+              className="send-button"
+              disabled={cancel.isPending}
+              onClick={() => cancel.mutate(responseId)}
+              title="停止生成"
+              type="button"
+            >
+              {cancel.isPending ? (
+                <LoaderCircle className="spin" size={20} aria-hidden="true" />
+              ) : (
+                <Square size={18} aria-hidden="true" />
+              )}
+              <span className="sr-only">停止生成</span>
+            </button>
+          ) : (
+            <button className="send-button" disabled={!draft.trim()} title="发送">
               <Send size={20} aria-hidden="true" />
-            )}
-            <span className="sr-only">发送</span>
-          </button>
+              <span className="sr-only">发送</span>
+            </button>
+          )}
         </form>
       </footer>
     </main>

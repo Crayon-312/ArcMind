@@ -1,7 +1,7 @@
 # 跨端事件契约基线
 
 状态：current
-最后校验日期：2026-08-06
+最后校验日期：2026-08-07
 
 ## 关系导航
 
@@ -47,9 +47,9 @@
 
 | 事件 | 最小载荷 | 是否耐久事实 |
 |---|---|---:|
-| `response.started` | `response_id`、响应内序号 | 否 |
+| `response.started` | `response_id`、响应内序号 | 耐久投递记录，不是最终轮次 |
 | `response.snapshot` | 当前完整临时文本、快照版本、响应内序号 | 可恢复快照，不是最终轮次 |
-| `response.delta` | 新增文本、响应内序号 | 否 |
+| `response.delta` | 新增文本、响应内序号 | 耐久投递记录，不是最终轮次 |
 | `response.completed` | 最终轮次标识、最终版本 | 是 |
 | `response.failed` | 稳定错误码、可重试性、关联标识 | 是 |
 | `response.cancelled` | 取消来源、最终版本 | 是 |
