@@ -4,6 +4,9 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { api, ApiError, type ConversationDetail, type ResponseEvent } from "./api";
 
+import { ParticleCore } from "./visual/ParticleCore";
+import { deriveCoreMode, type CoreMode, type VisualSignal } from "./visual/state";
+
 function LoadingScreen() {
   return (
     <main className="app-shell centered" aria-label="正在加载">
@@ -42,74 +45,81 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
   };
 
   return (
-    <main className="auth-layout">
-      <section className="identity-panel" aria-labelledby="auth-title">
-        <div className="brand-row">
-          <div className="brand-mark">A</div>
-          <div>
-            <strong>ArcMind</strong>
-            <span>测试运行时</span>
+    <>
+      <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" }}>
+        <ParticleCore mode="idle" signal={{ audio: { level: 0, low: 0, mid: 0, high: 0, rhythm: 0 }, tokenPulse: 0, errorPulse: 0, thinkingLevel: 0, speakingLevel: 0 }} />
+      </div>
+      <main className="auth-layout">
+        <section className="identity-panel" aria-labelledby="auth-title">
+          <div className="brand-row">
+            <div className="brand-mark">
+              <ShieldCheck size={20} aria-hidden="true" />
+            </div>
+            <div>
+              <strong>ArcMind</strong>
+              <span>测试运行时</span>
+            </div>
           </div>
-        </div>
-        <div className="auth-copy">
-          <ShieldCheck size={30} aria-hidden="true" />
-          <h1 id="auth-title">{challengeId ? "输入验证码" : "验证你的邮箱"}</h1>
-          <p>
-            {challengeId
-              ? "验证码已进入内部测试邮箱。"
-              : "首个版本仅允许部署时配置的邮箱登录。"}
-          </p>
-        </div>
-        <form onSubmit={submit} className="auth-form">
-          {challengeId ? (
-            <label>
-              <span>六位验证码</span>
-              <input
-                autoComplete="one-time-code"
-                inputMode="numeric"
-                maxLength={6}
-                pattern="[0-9]{6}"
-                value={code}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-                required
-              />
-            </label>
-          ) : (
-            <label>
-              <span>邮箱</span>
-              <input
-                autoComplete="email"
-                inputMode="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </label>
-          )}
-          {error && <p className="error-text" role="alert">{error}</p>}
-          <button
-            className="primary-button"
-            disabled={requestChallenge.isPending || verifyChallenge.isPending}
-            type="submit"
-          >
-            {requestChallenge.isPending || verifyChallenge.isPending ? (
-              <LoaderCircle className="spin" size={18} aria-hidden="true" />
-            ) : challengeId ? (
-              <Check size={18} aria-hidden="true" />
+          <div className="auth-copy">
+            <h1 id="auth-title">{challengeId ? "输入验证码" : "欢迎回来"}</h1>
+            <p>
+              {challengeId
+                ? "验证码已进入内部测试邮箱。"
+                : "请输入您的邮箱以获取验证码登录。"}
+            </p>
+          </div>
+          <form onSubmit={submit} className="auth-form">
+            {challengeId ? (
+              <label>
+                <span>六位验证码</span>
+                <input
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
+                  value={code}
+                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
+                  required
+                />
+              </label>
             ) : (
-              <ArrowRight size={18} aria-hidden="true" />
+              <label>
+                <span>电子邮箱</span>
+                <input
+                  autoComplete="email"
+                  inputMode="email"
+                  type="email"
+                  value={email}
+                  placeholder="name@company.com"
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+              </label>
             )}
-            {challengeId ? "验证并进入" : "发送验证码"}
-          </button>
-          {challengeId && (
-            <button className="text-button" type="button" onClick={() => setChallengeId(null)}>
-              更换邮箱
+            {error && <p className="error-text" role="alert">{error}</p>}
+            <button
+              className="primary-button"
+              disabled={requestChallenge.isPending || verifyChallenge.isPending}
+              type="submit"
+            >
+              {requestChallenge.isPending || verifyChallenge.isPending ? (
+                <LoaderCircle className="spin" size={18} aria-hidden="true" />
+              ) : challengeId ? (
+                <Check size={18} aria-hidden="true" />
+              ) : (
+                <ArrowRight size={18} aria-hidden="true" />
+              )}
+              {challengeId ? "验证并进入" : "发送验证码"}
             </button>
-          )}
-        </form>
-      </section>
-    </main>
+            {challengeId && (
+              <button className="text-button" type="button" onClick={() => setChallengeId(null)}>
+                使用其他邮箱
+              </button>
+            )}
+          </form>
+        </section>
+      </main>
+    </>
   );
 }
 
@@ -142,7 +152,14 @@ function MessageList({ conversation, streaming }: {
       {streaming && (
         <article className="message assistant pending">
           <span>ArcMind</span>
-          <p>{streaming}</p>
+          <p>
+            {streaming}
+            <span className="typing-indicator">
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+            </span>
+          </p>
         </article>
       )}
       <div ref={bottomRef} />
@@ -162,6 +179,15 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [responseId, setResponseId] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
+  const [coreMode, setCoreMode] = useState<CoreMode>("idle");
+  const [signal, setSignal] = useState<VisualSignal>({
+    audio: { level: 0, low: 0, mid: 0, high: 0, rhythm: 0 },
+    tokenPulse: 0,
+    errorPulse: 0,
+    thinkingLevel: 0,
+    speakingLevel: 0,
+  });
+
   const conversation = useQuery({
     queryKey: ["conversation", conversationId],
     queryFn: () => api.conversation(conversationId ?? ""),
@@ -178,6 +204,52 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
   });
 
   useEffect(() => () => eventSourceRef.current?.close(), []);
+
+  useEffect(() => {
+    // 简单地基于状态衍生核心的视觉模式
+    setCoreMode(deriveCoreMode({
+      conversationStatus: isResponding ? "streaming" : "idle",
+      microphoneStatus: "idle",
+      muted: false,
+      lastMessage: conversation.data?.turns && conversation.data.turns.length > 0
+        ? { role: conversation.data.turns[conversation.data.turns.length - 1]!.role as "user" | "assistant" | "system" }
+        : null
+    }));
+  }, [isResponding, conversation.data?.turns]);
+
+  useEffect(() => {
+    // 模拟的音频与思考信号
+    let timer: number;
+    const tick = () => {
+      setSignal(prev => {
+        const next = { ...prev };
+        if (coreMode === "speaking") {
+          next.speakingLevel = 1;
+          next.thinkingLevel = 0;
+          next.audio = {
+            level: 0.2 + Math.random() * 0.4,
+            low: 0.1 + Math.random() * 0.3,
+            mid: 0.3 + Math.random() * 0.5,
+            high: 0.2 + Math.random() * 0.4,
+            rhythm: Math.random() * 0.5
+          };
+        } else if (coreMode === "thinking") {
+          next.speakingLevel = 0;
+          next.thinkingLevel = 1;
+          next.audio = { level: 0, low: 0, mid: 0, high: 0, rhythm: 0 };
+          if (Math.random() > 0.8) next.tokenPulse = Date.now();
+        } else {
+          next.speakingLevel = 0;
+          next.thinkingLevel = 0;
+          next.audio = { level: 0, low: 0, mid: 0, high: 0, rhythm: 0 };
+        }
+        return next;
+      });
+      timer = window.setTimeout(tick, 100);
+    };
+    tick();
+    return () => clearTimeout(timer);
+  }, [coreMode]);
 
   const finishListening = (activeConversationId: string) => {
     eventSourceRef.current?.close();
@@ -244,62 +316,73 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
   };
 
   return (
-    <main className="chat-layout">
-      <header className="topbar">
-        <div className="brand-row compact">
-          <div className="brand-mark">A</div>
-          <div><strong>ArcMind</strong><span>文字闭环</span></div>
-        </div>
-        <div className="topbar-actions">
-          <span className="runtime-status"><i />测试模型</span>
-          <button className="icon-button" onClick={() => logout.mutate()} title="退出登录">
-            <LogOut size={19} aria-hidden="true" />
-            <span className="sr-only">退出登录</span>
-          </button>
-        </div>
-      </header>
-      <MessageList conversation={conversation.data} streaming={streaming} />
-      <footer className="composer-wrap">
-        {error && <p className="error-text" role="alert">{error}</p>}
-        <form className="composer" onSubmit={send}>
-          <textarea
-            aria-label="输入消息"
-            maxLength={20_000}
-            placeholder="输入消息"
-            rows={1}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-          />
-          {isResponding && responseId ? (
-            <button
-              className="send-button"
-              disabled={cancel.isPending}
-              onClick={() => cancel.mutate(responseId)}
-              title="停止生成"
-              type="button"
-            >
-              {cancel.isPending ? (
-                <LoaderCircle className="spin" size={20} aria-hidden="true" />
-              ) : (
-                <Square size={18} aria-hidden="true" />
-              )}
-              <span className="sr-only">停止生成</span>
+    <>
+      <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" }}>
+        <ParticleCore mode={coreMode} signal={signal} />
+      </div>
+      <main className="chat-layout">
+        <header className="topbar">
+          <div className="brand-row compact">
+            <div className="brand-mark">
+              <ShieldCheck size={18} aria-hidden="true" />
+            </div>
+            <div><strong>ArcMind</strong><span>文字闭环</span></div>
+          </div>
+          <div className="topbar-actions">
+            <span className="runtime-status"><i />测试模型</span>
+            <button className="icon-button" onClick={() => logout.mutate()} title="退出登录">
+              <LogOut size={18} aria-hidden="true" />
+              <span className="sr-only">退出登录</span>
             </button>
-          ) : (
-            <button className="send-button" disabled={!draft.trim()} title="发送">
-              <Send size={20} aria-hidden="true" />
-              <span className="sr-only">发送</span>
-            </button>
-          )}
-        </form>
-      </footer>
-    </main>
+          </div>
+        </header>
+        <MessageList conversation={conversation.data} streaming={streaming} />
+        <footer className="composer-wrap">
+          {error && <p className="error-text" role="alert">{error}</p>}
+          <form className="composer" onSubmit={send}>
+            <textarea
+              aria-label="输入消息"
+              maxLength={20_000}
+              placeholder="输入消息"
+              rows={1}
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                event.target.style.height = 'auto';
+                event.target.style.height = Math.min(event.target.scrollHeight, 140) + 'px';
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+            />
+            {isResponding && responseId ? (
+              <button
+                className="send-button"
+                disabled={cancel.isPending}
+                onClick={() => cancel.mutate(responseId)}
+                title="停止生成"
+                type="button"
+              >
+                {cancel.isPending ? (
+                  <LoaderCircle className="spin" size={20} aria-hidden="true" />
+                ) : (
+                  <Square size={18} aria-hidden="true" />
+                )}
+                <span className="sr-only">停止生成</span>
+              </button>
+            ) : (
+              <button className="send-button" disabled={!draft.trim()} title="发送">
+                <Send size={18} aria-hidden="true" />
+                <span className="sr-only">发送</span>
+              </button>
+            )}
+          </form>
+        </footer>
+      </main>
+    </>
   );
 }
 
