@@ -1,0 +1,25 @@
+{
+  default_sni {$ARCMIND_PUBLIC_IP}
+}
+
+{$ARCMIND_PUBLIC_IP} {
+  tls {
+    issuer acme {
+      dir https://acme-v02.api.letsencrypt.org/directory
+      profile shortlived
+    }
+  }
+
+  @api path /api/* /health/*
+  reverse_proxy @api api:8000 {
+    flush_interval -1
+  }
+  reverse_proxy web:8080
+
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Content-Type-Options nosniff
+    Referrer-Policy no-referrer
+    Permissions-Policy "microphone=(self)"
+  }
+}

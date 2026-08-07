@@ -1,0 +1,125 @@
+name: arcmind
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-file: "3"
+    max-size: 10m
+
+services:
+  edge:
+    image: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    restart: unless-stopped
+    environment:
+      ARCMIND_PUBLIC_IP: ${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-config:/config
+      - caddy-data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    networks:
+      - edge
+      - backend
+    logging: *default-logging
+
+  web:
+    image: ghcr.io/crayon-312/arcmind-mobile-web:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
+    restart: unless-stopped
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    logging: *default-logging
+
+  api:
+    image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      ARCMIND_ALLOWED_EMAIL: ${ARCMIND_ALLOWED_EMAIL:?set ARCMIND_ALLOWED_EMAIL}
+      ARCMIND_COOKIE_SECURE: "true"
+      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/arcmind
+      ARCMIND_ENVIRONMENT: staging
+      ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
+      ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
+      ARCMIND_SMTP_HOST: mailpit
+      ARCMIND_SMTP_PORT: "1025"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - backend
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    logging: *default-logging
+
+  migrate:
+    image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
+    profiles: ["migration"]
+    environment:
+      ARCMIND_ALLOWED_EMAIL: ${ARCMIND_ALLOWED_EMAIL:?set ARCMIND_ALLOWED_EMAIL}
+      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/arcmind
+      ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
+      ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: arcmind
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_USER: arcmind
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arcmind -d arcmind"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *default-logging
+
+  mailpit:
+    image: axllent/mailpit:v1.27.8@sha256:6abc8e633df15eaf785cfcf38bae48e66f64beecdc03121e249d0f9ec15f0707
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - backend
+    logging: *default-logging
+
+networks:
+  edge:
+  backend:
+    internal: true
+
+volumes:
+  caddy-config:
+  caddy-data:
+  postgres-data:

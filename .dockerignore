@@ -1,0 +1,12 @@
+.agent-context/local-index
+.git
+.github
+**/.env
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/dist
+**/node_modules
+docs
+out
+release
