@@ -31,16 +31,34 @@ def upgrade() -> None:
     )
     op.execute(
         """
-        UPDATE assistant_responses AS response
-        SET user_turn_id = (
-            SELECT turn.id
-            FROM turns AS turn
-            WHERE turn.conversation_id = response.conversation_id
-              AND turn.role = 'user'
-              AND turn.created_at <= response.created_at
-            ORDER BY turn.created_at DESC, turn.id DESC
-            LIMIT 1
+        WITH ranked_responses AS (
+            SELECT
+                id,
+                conversation_id,
+                row_number() OVER (
+                    PARTITION BY conversation_id
+                    ORDER BY created_at, id
+                ) AS position
+            FROM assistant_responses
+        ),
+        ranked_user_turns AS (
+            SELECT
+                id,
+                conversation_id,
+                row_number() OVER (
+                    PARTITION BY conversation_id
+                    ORDER BY created_at, id
+                ) AS position
+            FROM turns
+            WHERE role = 'user'
         )
+        UPDATE assistant_responses AS response
+        SET user_turn_id = user_turn.id
+        FROM ranked_responses AS ranked_response
+        JOIN ranked_user_turns AS user_turn
+          ON user_turn.conversation_id = ranked_response.conversation_id
+         AND user_turn.position = ranked_response.position
+        WHERE response.id = ranked_response.id
         """
     )
     op.alter_column("assistant_responses", "user_turn_id", nullable=False)

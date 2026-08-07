@@ -87,7 +87,7 @@
 | 范围 | 状态 | 证据或缺口 |
 |---|---|---|
 | 自动化门禁 | 通过（`passed`） | GitHub Actions 在提交 `0a1882f` 上通过契约生成、ESLint、TypeScript、Vitest、Vite 构建、Ruff、Pyright 和 7 个后端测试，并成功发布 API 与 Web 镜像 |
-| TXT-001、TXT-005、TXT-008、TXT-009、TXT-011 | 通过（`passed`） | ArcMind 新 VPS 的隔离 PostgreSQL 18 临时实例完成 5 项耐久生成集成测试：同事务入队回滚、Worker 增量与最终轮次、供应商失败、遗留生成恢复和取消幂等均通过；空库迁移、历史轮次回填、降级再升级、多 Worker 竞争和正常停止另行实测通过 |
+| TXT-001、TXT-005、TXT-008、TXT-009、TXT-011 | 通过（`passed`） | ArcMind 新 VPS 的隔离 PostgreSQL 18 临时实例完成 5 项耐久生成集成测试：同事务入队回滚、Worker 增量与最终轮次、供应商失败、遗留生成恢复和取消幂等均通过；多 Worker 竞争和正常停止另行实测通过。首次生产迁移发现旧 ORM 时间倒序后，改为按会话内稳定序号回填；两组旧顺序数据的升级、降级和再次升级专项测试通过 |
 | ID-007、ID-008 | 通过（`passed`） | 公网部署态 Chrome 完成验证码登录、会话 Cookie、退出和返回登录页；退出后只发生一次预期 `/api/v1/me` 401，没有重复请求循环 |
 | TXT-002、TXT-004 | 通过（`passed`） | 公网部署态收到 `response.started`、`response.snapshot`、`response.completed`，首条回复渲染成功；刷新后最终用户与助手轮次从 PostgreSQL 恢复 |
 | OPS-001 | 通过（`passed`） | 独立 VPS 已取得包含目标 IP SAN 的 Let’s Encrypt 证书；公网 TCP `443`、可信 HTTPS、HTTP 200 和健康接口均通过 |
