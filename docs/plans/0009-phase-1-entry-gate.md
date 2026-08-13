@@ -119,7 +119,7 @@ change_level: S3
 | 模型 | 首个供应商、适配器和失败语义 | 技术选型、Agent 架构、模型决策 | 官方资料与目标网络实测通过 |
 | 机器契约 | OpenAPI 3.1 与 JSON Schema | `packages/contracts` 的未来契约源、契约文档 | 机器校验和兼容规则明确 |
 | 质量 | 页面状态、测试矩阵和门禁结果 | 第一阶段设计就绪验收 | DR-004 至 DR-007 均有证据结论 |
-| 项目记忆 | 关闭身份、HTTPS、事件和模型开放问题 | `.agent-context/memory-sources/` | 与正式决策和验收一致 |
+| 项目记忆 | 关闭身份、HTTPS、事件和模型开放问题 | `docs/project-memory/` | 与正式决策和验收一致 |
 
 ## 有序任务清单
 

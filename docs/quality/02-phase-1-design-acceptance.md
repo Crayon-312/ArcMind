@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-quality-02-phase-1-design-acceptance"
+type: "project_fact"
+status: "draft"
+summary: "质量标准《验收口径：第一阶段设计就绪》的当前事实、边界与关联依据。"
+scope: ["quality"]
+tags: ["arcmind-v2", "quality"]
+confidence: "medium"
+last_verified: "2026-08-07"
+---
+
 # 验收口径：第一阶段设计就绪
 
 状态：draft

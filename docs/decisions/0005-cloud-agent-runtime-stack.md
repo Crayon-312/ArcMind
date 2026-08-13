@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-0005-cloud-agent-runtime-stack"
+type: "decision"
+status: "current"
+summary: "项目决策《决策 0005：云端与产品主 Agent 技术栈》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 决策 0005：云端与产品主 Agent 技术栈
 
 状态：accepted

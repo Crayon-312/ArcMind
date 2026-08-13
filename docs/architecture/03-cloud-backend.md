@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-03-cloud-backend"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《云端后端模块》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-08-07"
+---
+
 # 云端后端模块
 
 状态：current

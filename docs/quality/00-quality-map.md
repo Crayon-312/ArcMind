@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-quality-00-quality-map"
+type: "project_fact"
+status: "current"
+summary: "质量标准《质量内容地图》的当前事实、边界与关联依据。"
+scope: ["quality"]
+tags: ["arcmind-v2", "quality"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 质量内容地图
 
 状态：current

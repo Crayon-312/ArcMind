@@ -6,7 +6,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Issues = New-Object System.Collections.Generic.List[string]
-$MemoryIds = New-Object System.Collections.Generic.HashSet[string]
 $SensitivePatterns = @(
     "(?i)\b(api[_-]?key|token|access[_-]?token|refresh[_-]?token|secret|password|passwd|pwd|credential|private[_-]?key|cookie|session[_-]?id)\b",
     "\u8d26\u53f7",
@@ -66,116 +65,6 @@ function Test-NonPlaceholder {
 
     if (-not $AllowPlaceholders -and ($Value -match "<[^>]+>" -or $Value -match "YYYY")) {
         Add-Issue "$Field still contains a placeholder"
-    }
-}
-
-function Test-NoSensitiveObject {
-    param([object]$Value, [string]$Field)
-    if ($null -eq $Value) {
-        return
-    }
-
-    if ($Value -is [string]) {
-        foreach ($Pattern in $SensitivePatterns) {
-            if ($Value -match $Pattern) {
-                Add-Issue "$Field contains sensitive marker '$($Matches[0])'"
-                return
-            }
-        }
-        return
-    }
-
-    if ($Value -is [System.Array]) {
-        for ($Index = 0; $Index -lt $Value.Count; $Index++) {
-            Test-NoSensitiveObject $Value[$Index] "$Field[$Index]"
-        }
-        return
-    }
-
-    if ($Value -is [System.Management.Automation.PSCustomObject]) {
-        foreach ($Property in $Value.PSObject.Properties) {
-            Test-NoSensitiveObject $Property.Value "$Field.$($Property.Name)"
-        }
-    }
-}
-
-function Test-DateString {
-    param([string]$Value, [string]$Field)
-    if ([string]::IsNullOrWhiteSpace($Value) -or $Value -notmatch "^\d{4}-\d{2}-\d{2}$") {
-        Add-Issue "$Field must use YYYY-MM-DD"
-    }
-}
-
-function Test-EvidencePath {
-    param([string]$Value, [string]$Field)
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        Add-Issue "$Field must not be empty"
-        return
-    }
-
-    if ($Value -match "^(https?://|user-confirmed:)") {
-        return
-    }
-
-    $Candidate = Join-Path $Root $Value
-    if (-not (Test-Path -LiteralPath $Candidate)) {
-        Add-Issue "$Field references missing path '$Value'"
-    }
-}
-
-function Test-MemoryLine {
-    param([string]$RelativePath, [string]$Line, [int]$LineNumber)
-    try {
-        $Record = $Line | ConvertFrom-Json
-    }
-    catch {
-        Add-Issue "$RelativePath line $LineNumber is not valid JSON: $($_.Exception.Message)"
-        return
-    }
-
-    foreach ($Field in @("id", "status", "type", "scope", "summary", "source", "evidence", "confidence", "last_verified", "tags")) {
-        if (-not ($Record.PSObject.Properties.Name -contains $Field)) {
-            Add-Issue "$RelativePath line $LineNumber missing field '$Field'"
-        }
-    }
-
-    if ($Record.id) {
-        Test-NonPlaceholder ([string]$Record.id) "$RelativePath line $LineNumber id"
-        if (-not $MemoryIds.Add([string]$Record.id)) {
-            Add-Issue "$RelativePath line $LineNumber duplicates memory id '$($Record.id)'"
-        }
-    }
-
-    if ($Record.status -and @("current", "draft", "assumption", "stale", "deprecated") -notcontains $Record.status) {
-        Add-Issue "$RelativePath line $LineNumber has invalid status '$($Record.status)'"
-    }
-
-    if ($Record.confidence -and @("high", "medium", "low") -notcontains $Record.confidence) {
-        Add-Issue "$RelativePath line $LineNumber has invalid confidence '$($Record.confidence)'"
-    }
-
-    if ($Record.scope -isnot [System.Array] -or $Record.scope.Count -eq 0) {
-        Add-Issue "$RelativePath line $LineNumber scope must be a non-empty array"
-    }
-
-    if ($Record.tags -isnot [System.Array]) {
-        Add-Issue "$RelativePath line $LineNumber tags must be an array"
-    }
-
-    if ($Record.source) {
-        foreach ($Field in @("kind", "ref", "date")) {
-            if (-not ($Record.source.PSObject.Properties.Name -contains $Field)) {
-                Add-Issue "$RelativePath line $LineNumber source missing field '$Field'"
-            }
-        }
-        Test-DateString ([string]$Record.source.date) "$RelativePath line $LineNumber source.date"
-    }
-
-    Test-DateString ([string]$Record.last_verified) "$RelativePath line $LineNumber last_verified"
-    Test-NoSensitiveObject $Record "$RelativePath line $LineNumber"
-
-    foreach ($Evidence in @($Record.evidence)) {
-        Test-EvidencePath ([string]$Evidence) "$RelativePath line $LineNumber evidence"
     }
 }
 
@@ -260,7 +149,7 @@ function Test-KnowledgeGraph {
 
     foreach ($File in $MarkdownFiles) {
         $Content = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
-        $IsPublishedKnowledge = [regex]::IsMatch($Content, '(?m)^\u72b6\u6001\uff1a(current|accepted)\s*$')
+        $IsPublishedKnowledge = [regex]::IsMatch($Content, '(?m)^status:\s*"?current"?\s*$') -or [regex]::IsMatch($Content, '(?m)^\u72b6\u6001\uff1a(current|accepted)\s*$')
         $LinkDegree = [int]$Degrees[$File.FullName]
         if ($IsPublishedKnowledge -and $LinkDegree -eq 0) {
             Add-Issue "Current knowledge document is isolated: $($File.FullName.Substring($Root.Length + 1))"
@@ -311,7 +200,6 @@ catch {
 }
 
 $RequiredDirectories = @(
-    ".agent-context/memory-sources",
     "docs/product",
     "docs/architecture",
     "docs/domain",
@@ -321,12 +209,12 @@ $RequiredDirectories = @(
     "docs/decisions",
     "docs/plans",
     "docs/quality"
+    "docs/project-memory"
 )
 $RequiredFiles = @(
     "AGENTS.md",
     "README.md",
     ".agent-context/config.json",
-    ".agent-context/memory-sources/README.md",
     ".gitignore",
     ".gitattributes",
     "docs/00-index.md",
@@ -350,6 +238,7 @@ $RequiredFiles = @(
     "docs/plans/0002-v2-design-readiness.md",
     "docs/plans/0003-three-app-architecture-review.md",
     "docs/quality/02-phase-1-design-acceptance.md"
+    "docs/project-memory/00-project-memory-map.md"
 )
 
 foreach ($Directory in $RequiredDirectories) { Test-RequiredDirectory $Directory }
@@ -366,6 +255,9 @@ Test-ContainsText "docs/00-index.md" "docs/architecture"
 if (Test-Path -LiteralPath (Join-Path $Root "docs/agent")) {
     Add-Issue "Legacy docs/agent must not exist in the V2 thin-launcher project"
 }
+if (Test-Path -LiteralPath (Join-Path $Root ".agent-context/memory-sources")) {
+    Add-Issue "Legacy .agent-context/memory-sources must not exist after the schema 3 migration"
+}
 
 $ConfigPath = Join-Path $Root ".agent-context/config.json"
 $Config = $null
@@ -379,7 +271,7 @@ if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
 }
 
 if ($Config) {
-    foreach ($Field in @("schema_version", "project_id", "project_name", "engine", "memory", "quality")) {
+    foreach ($Field in @("schema_version", "project_id", "project_name", "agent", "memory", "quality")) {
         if (-not ($Config.PSObject.Properties.Name -contains $Field)) {
             Add-Issue ".agent-context/config.json missing field '$Field'"
         }
@@ -387,11 +279,17 @@ if ($Config) {
     Test-NonPlaceholder ([string]$Config.project_id) "project_id"
     Test-NonPlaceholder ([string]$Config.project_name) "project_name"
 
-    if ($Config.engine.mode -ne "thin-launcher") {
-        Add-Issue "engine.mode must be 'thin-launcher'"
+    if ($Config.schema_version -ne 3) {
+        Add-Issue "schema_version must be 3"
+    }
+    if ($Config.PSObject.Properties.Name -contains "engine") {
+        Add-Issue "schema 3 must use 'agent', not legacy 'engine'"
+    }
+    if ($Config.agent.mode -ne "thin-launcher") {
+        Add-Issue "agent.mode must be 'thin-launcher'"
     }
     foreach ($Field in @("name", "mode", "version", "source")) {
-        Test-NonPlaceholder ([string]$Config.engine.$Field) "engine.$Field"
+        Test-NonPlaceholder ([string]$Config.agent.$Field) "agent.$Field"
     }
 
     if ($Config.memory.local_index.git_tracked -ne $false) {
@@ -400,37 +298,28 @@ if ($Config) {
     foreach ($Field in @("provider", "path")) {
         Test-NonPlaceholder ([string]$Config.memory.local_index.$Field) "memory.local_index.$Field"
     }
+    if ($Config.memory.local_index.provider -ne "embedded-json") {
+        Add-Issue "memory.local_index.provider must be 'embedded-json'"
+    }
     if ($Config.quality.validation_commands.Count -eq 0) {
         Add-Issue "quality.validation_commands must not be empty"
     }
-
-    $MemoryFiles = New-Object System.Collections.Generic.List[object]
-    foreach ($SourcePath in @($Config.memory.source_paths)) {
-        Test-NonPlaceholder ([string]$SourcePath) "memory.source_paths"
-        if ([string]$SourcePath -notlike "*.jsonl" -or [string]$SourcePath -like "*_example*") {
-            Add-Issue "memory.source_paths must target formal JSONL files only: $SourcePath"
-            continue
-        }
-        $Matches = @(Get-ChildItem -Path (Join-Path $Root ([string]$SourcePath)) -File -ErrorAction SilentlyContinue)
-        foreach ($Match in $Matches) { $MemoryFiles.Add($Match) | Out-Null }
+    if ($Config.memory.PSObject.Properties.Name -contains "source_paths") {
+        Add-Issue "schema 3 must not contain legacy memory.source_paths"
     }
-
-    if ($MemoryFiles.Count -eq 0 -and -not $AllowPlaceholders) {
-        Add-Issue "memory.source_paths did not match any JSONL memory source"
+    $Sources = @($Config.memory.sources)
+    if ($Sources.Count -ne 1) {
+        Add-Issue "ArcMind schema 3 must configure exactly one Obsidian knowledge source"
     }
-
-    foreach ($File in $MemoryFiles) {
-        $RelativePath = $File.FullName.Substring($Root.Length + 1)
-        $Lines = @(Get-Content -LiteralPath $File.FullName -Encoding UTF8)
-        $NonEmpty = 0
-        for ($Index = 0; $Index -lt $Lines.Count; $Index++) {
-            $Line = $Lines[$Index].Trim()
-            if ([string]::IsNullOrWhiteSpace($Line)) { continue }
-            $NonEmpty++
-            Test-MemoryLine $RelativePath $Line ($Index + 1)
+    foreach ($Source in $Sources) {
+        foreach ($Field in @("id", "provider", "path")) {
+            Test-NonPlaceholder ([string]$Source.$Field) "memory.sources.$Field"
         }
-        if ($NonEmpty -eq 0 -and -not $AllowPlaceholders) {
-            Add-Issue "$RelativePath must contain at least one memory record"
+        if ($Source.provider -ne "obsidian") {
+            Add-Issue "ArcMind knowledge source must use the Obsidian provider"
+        }
+        if ($Source.path -ne "docs") {
+            Add-Issue "ArcMind Obsidian knowledge source must be 'docs'"
         }
     }
 }

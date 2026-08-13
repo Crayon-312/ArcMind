@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-quality-01-documentation-acceptance"
+type: "project_fact"
+status: "current"
+summary: "质量标准《验收口径：V2 文档基线》的当前事实、边界与关联依据。"
+scope: ["quality"]
+tags: ["arcmind-v2", "quality"]
+confidence: "high"
+last_verified: "2026-08-03"
+---
+
 # 验收口径：V2 文档基线
 
 状态：current
@@ -22,7 +33,7 @@
 | DA-005 | 手机、云端、工作机和主 Agent 职责及非职责明确 | 检查 `docs/architecture/` |
 | DA-006 | 对话、任务、提醒和跨端事件具有可执行基线 | 检查 `docs/business/` 与 `docs/contracts/` |
 | DA-007 | 当前事实和开放问题没有混写 | 检查文档状态与项目记忆状态 |
-| DA-008 | 项目记忆 JSONL 合法、无占位符和敏感标记 | 运行 `scripts/check-agent.ps1` |
+| DA-008 | Obsidian 正式知识具有唯一 ID、合法类型/状态/摘要且无敏感标记 | 运行 `pnpm context:validate` |
 | DA-009 | 本地索引和运行配置被 Git 忽略 | 检查 `.gitignore` 和配置 |
 | DA-010 | 文档无空白错误，交叉引用目标存在 | `git diff --check` 加自动链接检查 |
 | DA-011 | `docs/` 可作为 Obsidian 知识库打开，且个人工作区和下载扩展不进入 Git | 检查 `.obsidian/app.json` 与 `.gitignore` |
@@ -31,6 +42,8 @@
 | DA-014 | 总索引、领域内容地图和跨领域语义关系形成可导航知识网络 | 运行项目检查并量化内部文档关系 |
 | DA-015 | 当前有效和已接受的正式文档不得成为关系孤岛 | 运行 `scripts/check-agent.ps1` 的知识关系检查 |
 | DA-016 | 新增正式文档必须被对应领域内容地图收录 | 检查正式目录的 `00-*-map.md` 与文档入度 |
+| DA-017 | Agent Context OS 能从唯一 Obsidian 来源重建索引并检索产品、架构和历史问题 | 运行 `pnpm context:index` 和固定检索用例 |
+| DA-018 | schema 1、旧 `engine`、JSONL 记忆源和旧索引 provider 不得复活 | 运行 `scripts/check-agent.ps1` |
 
 ## 本阶段不适用
 

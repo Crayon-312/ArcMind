@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-12-durable-jobs-and-scheduling"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《耐久 Job、调度与恢复设计》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-08-07"
+---
+
 # 耐久 Job、调度与恢复设计
 
 状态：current

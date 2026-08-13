@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-0012-personal-email-otp-identity"
+type: "decision"
+status: "current"
+summary: "项目决策《决策 0012：本人优先的邮箱验证码身份基线》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 决策 0012：本人优先的邮箱验证码身份基线
 
 状态：accepted

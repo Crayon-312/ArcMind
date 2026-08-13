@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-07-security-and-deployment"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《安全与部署边界》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-08-07"
+---
+
 # 安全与部署边界
 
 状态：current

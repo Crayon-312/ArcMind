@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-product-04-delivery-roadmap"
+type: "project_fact"
+status: "current"
+summary: "产品知识《V2 交付路线》的当前事实、边界与关联依据。"
+scope: ["product"]
+tags: ["arcmind-v2", "product"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # V2 交付路线
 
 状态：current
@@ -30,7 +41,7 @@
 
 - 建立 Agent Context OS 极薄入口。
 - 明确产品范围、三端职责、业务流程和架构边界。
-- 建立可追溯项目记忆源。
+- 建立可追溯、可由 Agent 索引检索的 Obsidian 项目知识。
 - 建立 V2 分支和文档验证门禁。
 
 退出条件：文档结构完整、无占位符、门禁通过、V2 可独立克隆理解。

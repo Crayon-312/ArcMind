@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-0011-knowledge-relationship-model"
+type: "decision"
+status: "current"
+summary: "项目决策《决策 0011：知识关系分层模型》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-08-03"
+---
+
 # 决策 0011：知识关系分层模型
 
 状态：accepted

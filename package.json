@@ -6,8 +6,14 @@
   "scripts": {
     "build": "pnpm -r --if-present build",
     "check": "pnpm contracts:generate && pnpm -r --if-present lint && pnpm -r --if-present typecheck && pnpm -r --if-present test && pnpm -r --if-present build",
+    "context:index": "agent-context index --project .",
+    "context:search": "agent-context search --project .",
+    "context:validate": "agent-context validate --project .",
     "contracts:generate": "pnpm --filter @arcmind/contracts generate",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "agent-context-os": "github:Crayon-312/agent-context-os#fd84369ae9fd1d88df222d18a8519fba87592f4e"
   }
 }

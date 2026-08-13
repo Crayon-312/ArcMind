@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-domain-00-glossary"
+type: "business_rule"
+status: "current"
+summary: "领域知识《ArcMind V2 统一术语》的当前事实、边界与关联依据。"
+scope: ["domain"]
+tags: ["arcmind-v2", "domain"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # ArcMind V2 统一术语
 
 状态：current

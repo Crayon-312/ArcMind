@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-contracts-03-workstation-channel"
+type: "architecture_rule"
+status: "draft"
+summary: "公开契约《云端与工作机通道契约草案》的当前事实、边界与关联依据。"
+scope: ["contracts"]
+tags: ["arcmind-v2", "contracts"]
+confidence: "medium"
+last_verified: "2026-07-30"
+---
+
 # 云端与工作机通道契约草案
 
 状态：draft

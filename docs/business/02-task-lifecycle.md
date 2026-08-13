@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-business-02-task-lifecycle"
+type: "business_rule"
+status: "current"
+summary: "业务规则《状态机：任务生命周期》的当前事实、边界与关联依据。"
+scope: ["business"]
+tags: ["arcmind-v2", "business"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 状态机：任务生命周期
 
 状态：current

@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-02-mobile-web"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《手机 Web 端模块》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 手机 Web 端模块
 
 状态：current

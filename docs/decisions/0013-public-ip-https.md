@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-0013-public-ip-https"
+type: "decision"
+status: "current"
+summary: "项目决策《决策 0013：固定公网 IP 的可信 HTTPS 基线》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 决策 0013：固定公网 IP 的可信 HTTPS 基线
 
 状态：accepted

@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-0001-v2-independent-line"
+type: "decision"
+status: "current"
+summary: "项目决策《决策 0001：V2 作为独立长期开发线》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 决策 0001：V2 作为独立长期开发线
 
 状态：accepted

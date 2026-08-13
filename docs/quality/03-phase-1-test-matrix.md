@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-quality-03-phase-1-test-matrix"
+type: "project_fact"
+status: "current"
+summary: "质量标准《第一阶段身份与文字闭环测试矩阵》的当前事实、边界与关联依据。"
+scope: ["quality"]
+tags: ["arcmind-v2", "quality"]
+confidence: "high"
+last_verified: "2026-08-07"
+---
+
 # 第一阶段身份与文字闭环测试矩阵
 
 状态：current

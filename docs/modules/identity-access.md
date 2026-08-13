@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-modules-identity-access"
+type: "architecture_rule"
+status: "current"
+summary: "模块边界《模块卡片：身份与访问》的当前事实、边界与关联依据。"
+scope: ["modules"]
+tags: ["arcmind-v2", "modules"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 模块卡片：身份与访问
 
 状态：current

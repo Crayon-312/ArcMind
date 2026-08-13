@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-0010-obsidian-task-publication"
+type: "decision"
+status: "current"
+summary: "项目决策《决策 0010：Obsidian 知识库与任务隔离发布》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-08-03"
+---
+
 # 决策 0010：Obsidian 知识库与任务隔离发布
 
 状态：accepted

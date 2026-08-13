@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-0003-development-engine-boundary"
+type: "decision"
+status: "current"
+summary: "项目决策《决策 0003：开发协作引擎与产品运行时分离》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 决策 0003：开发协作引擎与产品运行时分离
 
 状态：accepted

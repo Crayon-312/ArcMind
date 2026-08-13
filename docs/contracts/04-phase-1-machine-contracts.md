@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-contracts-04-phase-1-machine-contracts"
+type: "architecture_rule"
+status: "current"
+summary: "公开契约《第一阶段机器契约》的当前事实、边界与关联依据。"
+scope: ["contracts"]
+tags: ["arcmind-v2", "contracts"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 第一阶段机器契约
 
 状态：current

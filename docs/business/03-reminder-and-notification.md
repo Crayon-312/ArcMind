@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-business-03-reminder-and-notification"
+type: "business_rule"
+status: "current"
+summary: "业务规则《业务流程：提醒与通知》的当前事实、边界与关联依据。"
+scope: ["business"]
+tags: ["arcmind-v2", "business"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 业务流程：提醒与通知
 
 状态：current

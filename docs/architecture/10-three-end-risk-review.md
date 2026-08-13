@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-10-three-end-risk-review"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《三端架构一致性与风险审查》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 三端架构一致性与风险审查
 
 状态：current

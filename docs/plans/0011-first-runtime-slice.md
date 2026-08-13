@@ -77,7 +77,7 @@ change_level: S3
 | 手机 Web | 登录、会话恢复和文字对话 | `apps/mobile-web/` | 构建、组件和浏览器测试通过 |
 | 永久新 VPS | SSH、防火墙、容器、数据、HTTPS 和恢复 | `infrastructure/cloud/` 与本任务证据 | 只修改新主机，外部与重启验收通过 |
 | 正式文档 | 已实现边界、部署事实和质量状态 | 架构、决策和质量矩阵 | 只写入验证后的事实 |
-| 项目记忆 | 首个运行时与永久服务器事实 | `.agent-context/memory-sources/` | 与实现和测试证据一致 |
+| 项目记忆 | 首个运行时与永久服务器事实 | `docs/project-memory/` | 与实现和测试证据一致 |
 
 ## 有序任务清单
 

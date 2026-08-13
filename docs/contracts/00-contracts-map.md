@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-contracts-00-contracts-map"
+type: "architecture_rule"
+status: "current"
+summary: "公开契约《契约内容地图》的当前事实、边界与关联依据。"
+scope: ["contracts"]
+tags: ["arcmind-v2", "contracts"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 契约内容地图
 
 状态：current

@@ -1,19 +1,34 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "project_id": "arcmind-v2",
   "project_name": "ArcMind V2",
-  "engine": {
+  "agent": {
     "name": "Agent Context OS",
     "mode": "thin-launcher",
-    "version": "b6de397b189a9ce30ac597698228946a08645743",
-    "source": "https://github.com/Crayon-312/agent-context-os.git"
+    "version": "0.2.0-fd84369",
+    "source": "agent-context-os"
   },
   "memory": {
-    "source_paths": [
-      ".agent-context/memory-sources/memory-*.jsonl"
+    "sources": [
+      {
+        "id": "arcmind-knowledge-vault",
+        "provider": "obsidian",
+        "path": "docs",
+        "required_frontmatter": [
+          "id",
+          "type",
+          "status",
+          "summary"
+        ],
+        "exclude_directories": [
+          "plans",
+          "templates",
+          "assets"
+        ]
+      }
     ],
     "local_index": {
-      "provider": "deferred-local-hybrid-index",
+      "provider": "embedded-json",
       "path": ".agent-context/local-index",
       "git_tracked": false
     }
@@ -21,6 +36,7 @@
   "quality": {
     "check_command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-agent.ps1",
     "validation_commands": [
+      "pnpm context:validate",
       "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-agent.ps1",
       "git diff --check"
     ]

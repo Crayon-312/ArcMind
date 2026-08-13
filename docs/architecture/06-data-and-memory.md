@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-06-data-and-memory"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《数据、上下文与记忆边界》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 数据、上下文与记忆边界
 
 状态：current

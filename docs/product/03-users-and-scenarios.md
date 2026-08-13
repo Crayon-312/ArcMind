@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-product-03-users-and-scenarios"
+type: "project_fact"
+status: "current"
+summary: "产品知识《用户与关键场景》的当前事实、边界与关联依据。"
+scope: ["product"]
+tags: ["arcmind-v2", "product"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 用户与关键场景
 
 状态：current

@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-business-04-identity-and-device-flow"
+type: "business_rule"
+status: "current"
+summary: "业务规则《业务流程：身份与工作机绑定》的当前事实、边界与关联依据。"
+scope: ["business"]
+tags: ["arcmind-v2", "business"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 业务流程：身份与工作机绑定
 
 状态：current

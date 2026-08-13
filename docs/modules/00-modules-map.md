@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-modules-00-modules-map"
+type: "architecture_rule"
+status: "current"
+summary: "模块边界《模块内容地图》的当前事实、边界与关联依据。"
+scope: ["modules"]
+tags: ["arcmind-v2", "modules"]
+confidence: "high"
+last_verified: "2026-08-03"
+---
+
 # 模块内容地图
 
 状态：current

@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-00-decisions-map"
+type: "decision"
+status: "current"
+summary: "项目决策《决策内容地图》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 决策内容地图
 
 状态：current
@@ -17,6 +28,7 @@
 - [决策 0003：开发协作引擎与产品运行时分离](0003-development-engine-boundary.md)
 - [决策 0010：Obsidian 知识库与任务隔离发布](0010-obsidian-task-publication.md)
 - [决策 0011：知识关系分层模型](0011-knowledge-relationship-model.md)
+- [决策 0016：完整使用 Agent Context OS schema 3 与 Obsidian 唯一知识源](0016-agent-context-os-v3-obsidian-source.md)
 
 ## 产品拓扑与工程组织
 

@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-05-agent-runtime"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《产品 Agent Runtime 协作模型》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 产品 Agent Runtime 协作模型
 
 状态：current

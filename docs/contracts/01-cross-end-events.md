@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-contracts-01-cross-end-events"
+type: "architecture_rule"
+status: "current"
+summary: "公开契约《跨端事件契约基线》的当前事实、边界与关联依据。"
+scope: ["contracts"]
+tags: ["arcmind-v2", "contracts"]
+confidence: "high"
+last_verified: "2026-08-07"
+---
+
 # 跨端事件契约基线
 
 状态：current

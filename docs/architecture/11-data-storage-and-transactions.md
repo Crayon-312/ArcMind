@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-11-data-storage-and-transactions"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《数据存储、事务与检索设计》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-08-07"
+---
+
 # 数据存储、事务与检索设计
 
 状态：current

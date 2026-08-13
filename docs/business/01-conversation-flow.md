@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-business-01-conversation-flow"
+type: "business_rule"
+status: "current"
+summary: "业务规则《业务流程：实时对话与任务形成》的当前事实、边界与关联依据。"
+scope: ["business"]
+tags: ["arcmind-v2", "business"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 业务流程：实时对话与任务形成
 
 状态：current

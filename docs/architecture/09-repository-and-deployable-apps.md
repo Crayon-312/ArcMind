@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-09-repository-and-deployable-apps"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《代码仓库与三套可部署应用》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 代码仓库与三套可部署应用
 
 状态：current

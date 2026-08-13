@@ -6,7 +6,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      agent-context-os:
+        specifier: github:Crayon-312/agent-context-os#fd84369ae9fd1d88df222d18a8519fba87592f4e
+        version: https://codeload.github.com/Crayon-312/agent-context-os/tar.gz/fd84369ae9fd1d88df222d18a8519fba87592f4e
 
   apps/mobile-web:
     dependencies:
@@ -672,6 +676,12 @@ packages:
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
+
+  agent-context-os@https://codeload.github.com/Crayon-312/agent-context-os/tar.gz/fd84369ae9fd1d88df222d18a8519fba87592f4e:
+    resolution: {tarball: https://codeload.github.com/Crayon-312/agent-context-os/tar.gz/fd84369ae9fd1d88df222d18a8519fba87592f4e}
+    version: 0.2.0
+    engines: {node: '>=20'}
+    hasBin: true
 
   ajv@6.15.0:
     resolution: {integrity: sha512-fgFx7Hfoq60ytK2c7DhnF8jIvzYgOMxfugjLOSMHjLIPgenqa7S7oaagATUq99mV6IYvN2tRmC0wnTYX6iPbMw==}
@@ -2056,6 +2066,8 @@ snapshots:
   acorn@8.18.0: {}
 
   agent-base@7.1.4: {}
+
+  agent-context-os@https://codeload.github.com/Crayon-312/agent-context-os/tar.gz/fd84369ae9fd1d88df222d18a8519fba87592f4e: {}
 
   ajv@6.15.0:
     dependencies:

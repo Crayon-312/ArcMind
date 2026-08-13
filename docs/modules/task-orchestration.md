@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-modules-task-orchestration"
+type: "architecture_rule"
+status: "current"
+summary: "模块边界《模块卡片：任务编排》的当前事实、边界与关联依据。"
+scope: ["modules"]
+tags: ["arcmind-v2", "modules"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 模块卡片：任务编排
 
 状态：current

@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-domain-01-core-domain-model"
+type: "business_rule"
+status: "draft"
+summary: "领域知识《核心领域模型》的当前事实、边界与关联依据。"
+scope: ["domain"]
+tags: ["arcmind-v2", "domain"]
+confidence: "medium"
+last_verified: "2026-08-06"
+---
+
 # 核心领域模型
 
 状态：draft

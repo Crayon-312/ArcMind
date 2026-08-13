@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-01-system-context"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《系统上下文与总体边界》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 系统上下文与总体边界
 
 状态：current

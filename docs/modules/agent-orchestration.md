@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-modules-agent-orchestration"
+type: "architecture_rule"
+status: "draft"
+summary: "模块边界《模块卡片：主 Agent Runtime》的当前事实、边界与关联依据。"
+scope: ["modules"]
+tags: ["arcmind-v2", "modules"]
+confidence: "medium"
+last_verified: "2026-07-30"
+---
+
 # 模块卡片：主 Agent Runtime
 
 状态：draft

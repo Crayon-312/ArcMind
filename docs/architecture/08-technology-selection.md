@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-08-technology-selection"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《技术选型与决策门禁》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 技术选型与决策门禁
 
 状态：current

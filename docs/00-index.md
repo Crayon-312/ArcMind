@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-00-index"
+type: "project_fact"
+status: "current"
+summary: "ArcMind V2 项目知识库的总入口、领域导航和核心阅读路径。"
+scope: ["knowledge-base"]
+tags: ["arcmind-v2", "knowledge-base"]
+confidence: "high"
+last_verified: "2026-08-03"
+---
+
 # ArcMind V2 项目文档总索引
 
 状态：current
@@ -5,7 +16,7 @@
 
 本索引是 ArcMind V2 知识网络的总入口，只负责连接各领域内容地图和核心阅读路径。每个领域的完整文件清单、阅读顺序和关系规则由对应内容地图维护，避免总索引成为连接全部文件的扁平中心。
 
-Agent Context OS（智能协作上下文操作系统）的完整开发规则不复制到项目文档；开发工具从仓库根 `AGENTS.md` 和 `.agent-context/config.json` 加载指定版本引擎。
+Agent Context OS（智能协作上下文操作系统）的完整开发规则不复制到项目文档；开发工具从仓库根 `AGENTS.md` 和 `.agent-context/config.json` 加载固定版本 Agent，并校验、索引和检索本知识库。
 
 ## 知识领域
 
@@ -20,6 +31,7 @@ Agent Context OS（智能协作上下文操作系统）的完整开发规则不�
 | 决策 | 当前取舍为什么成立 | [决策内容地图](decisions/00-decisions-map.md) |
 | 计划 | 已批准方案如何按清单落实 | [计划内容地图](plans/00-plans-map.md) |
 | 质量 | 什么证据足以进入下一阶段 | [质量内容地图](quality/00-quality-map.md) |
+| 项目记忆 | 哪些稳定事实、历史问题和开放问题需要跨任务复用 | [项目记忆内容地图](project-memory/00-project-memory-map.md) |
 
 这些内容地图分别对应 `docs/product/`、`docs/domain/`、`docs/architecture/`、`docs/modules/`、`docs/business/`、`docs/contracts/`、`docs/decisions/`、`docs/plans/` 和 `docs/quality/`，目录用于稳定分类，链接用于表达知识关系。
 
@@ -72,4 +84,4 @@ Agent Context OS（智能协作上下文操作系统）的完整开发规则不�
 - 端侧职责或依赖变化：同步检查系统架构、模块卡片、跨端契约和质量标准。
 - 技术选型只有通过[技术选型与决策门禁](architecture/08-technology-selection.md)后才能成为当前事实。
 - 新增正式文档必须进入一个领域内容地图；当前有效文档不得成为关系孤岛。
-- 项目记忆用于检索，正式文档承载完整事实；两者必须保持一致。
+- 可复用项目记忆直接存入 `project-memory/` 的 Obsidian Markdown；不得恢复独立 JSONL 记忆源。

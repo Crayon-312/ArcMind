@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-modules-mobile-web"
+type: "architecture_rule"
+status: "current"
+summary: "模块边界《模块卡片：手机 Web》的当前事实、边界与关联依据。"
+scope: ["modules"]
+tags: ["arcmind-v2", "modules"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 模块卡片：手机 Web
 
 状态：current

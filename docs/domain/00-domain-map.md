@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-domain-00-domain-map"
+type: "business_rule"
+status: "current"
+summary: "领域知识《领域内容地图》的当前事实、边界与关联依据。"
+scope: ["domain"]
+tags: ["arcmind-v2", "domain"]
+confidence: "high"
+last_verified: "2026-08-03"
+---
+
 # 领域内容地图
 
 状态：current

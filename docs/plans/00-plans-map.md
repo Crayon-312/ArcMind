@@ -22,6 +22,7 @@
 - [Obsidian 知识库与任务隔离](0007-obsidian-task-isolation.md)
 - [知识关系重构](0008-knowledge-relationship-reconstruction.md)
 - [ArcMind V2 首个运行时纵向切片与永久服务器发布](0011-first-runtime-slice.md)（已完成，`done`；公网身份与文字闭环已验收）
+- [Agent Context OS 新版完整升级](0013-agent-context-os-v3-upgrade.md)（已完成，`done`；schema 3、Obsidian 唯一知识源与可执行本地检索已验收）
 
 ## 当前台账
 

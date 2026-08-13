@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-0015-first-model-provider"
+type: "decision"
+status: "current"
+summary: "项目决策《决策 0015：首个主 Agent 模型使用 DeepSeek V4 Pro》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-08-06"
+---
+
 # 决策 0015：首个主 Agent 模型使用 DeepSeek V4 Pro
 
 状态：accepted

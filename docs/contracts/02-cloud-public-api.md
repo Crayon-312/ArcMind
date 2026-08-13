@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-contracts-02-cloud-public-api"
+type: "architecture_rule"
+status: "draft"
+summary: "公开契约《云端公开 API 契约草案》的当前事实、边界与关联依据。"
+scope: ["contracts"]
+tags: ["arcmind-v2", "contracts"]
+confidence: "medium"
+last_verified: "2026-08-06"
+---
+
 # 云端公开 API 契约草案
 
 状态：draft

@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-architecture-00-architecture-map"
+type: "architecture_rule"
+status: "current"
+summary: "架构知识《架构内容地图》的当前事实、边界与关联依据。"
+scope: ["architecture"]
+tags: ["arcmind-v2", "architecture"]
+confidence: "high"
+last_verified: "2026-08-03"
+---
+
 # 架构内容地图
 
 状态：current

@@ -1,3 +1,14 @@
+---
+id: "arcmind-doc-decisions-0006-mobile-web-stack"
+type: "decision"
+status: "current"
+summary: "项目决策《决策 0006：手机 Web 技术栈》的当前事实、边界与关联依据。"
+scope: ["decisions"]
+tags: ["arcmind-v2", "decisions"]
+confidence: "high"
+last_verified: "2026-07-30"
+---
+
 # 决策 0006：手机 Web 技术栈
 
 状态：accepted
