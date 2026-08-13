@@ -15,6 +15,7 @@ const authState = vi.hoisted(() => ({ authenticated: false }));
 const apiMocks = vi.hoisted(() => ({
   cancelResponse: vi.fn(),
   conversation: vi.fn(),
+  login: vi.fn(),
   sendTurn: vi.fn(),
 }));
 
@@ -36,6 +37,7 @@ vi.mock("./api", async () => {
       logout: vi.fn(async () => {
         authState.authenticated = false;
       }),
+      login: apiMocks.login,
       cancelResponse: apiMocks.cancelResponse,
       conversation: apiMocks.conversation,
       sendTurn: apiMocks.sendTurn,
@@ -109,9 +111,19 @@ describe("App", () => {
       state: "cancelled",
       version: 2,
     });
+    apiMocks.login.mockImplementation(async () => {
+      authState.authenticated = true;
+      return {
+        id: "00000000-0000-4000-8000-000000000001",
+        status: "active" as const,
+        locale: "zh-CN",
+        time_zone: "Asia/Shanghai",
+        created_at: "2026-08-07T00:00:00Z",
+      };
+    });
   });
 
-  it("shows the email identity entry when there is no session", async () => {
+  it("shows the account login when there is no session", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
@@ -119,10 +131,12 @@ describe("App", () => {
       </QueryClientProvider>,
     );
     expect(await screen.findByRole("heading", { name: "欢迎回来" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "发送验证码" })).toBeEnabled();
+    expect(screen.getByLabelText("账号")).toBeInTheDocument();
+    expect(screen.getByLabelText("密码")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "登录" })).toBeEnabled();
   });
 
-  it("returns to the email identity entry after logout", async () => {
+  it("returns to the account login after logout", async () => {
     authState.authenticated = true;
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(

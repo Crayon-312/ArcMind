@@ -10,40 +10,19 @@ servers:
 security:
   - sessionCookie: []
 paths:
-  /auth/challenges:
+  /auth/session:
     post:
-      operationId: requestAuthChallenge
+      operationId: createAuthSession
       security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthChallengeRequest'
-      responses:
-        '202':
-          description: Request accepted without disclosing account state.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthChallengeAccepted'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /auth/challenges/{challenge_id}/verify:
-    post:
-      operationId: verifyAuthChallenge
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/ChallengeId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuthChallengeVerification'
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Challenge consumed and session created.
+          description: Credentials accepted and session created.
           headers:
             Set-Cookie:
               schema:
@@ -52,8 +31,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CurrentUser'
-        '400':
-          $ref: '#/components/responses/ChallengeUnavailable'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
         '429':
           $ref: '#/components/responses/RateLimited'
   /auth/sessions/current:
@@ -191,12 +170,6 @@ components:
       in: cookie
       name: __Host-arcmind_session
   parameters:
-    ChallengeId:
-      name: challenge_id
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Uuid'
     ConversationId:
       name: conversation_id
       in: path
@@ -218,8 +191,8 @@ components:
         minLength: 16
         maxLength: 128
   responses:
-    ChallengeUnavailable:
-      description: Challenge is invalid, expired, locked, consumed, or otherwise unavailable.
+    InvalidCredentials:
+      description: Username or password is invalid without disclosing which value failed.
       content:
         application/json:
           schema:
@@ -260,36 +233,19 @@ components:
     Timestamp:
       type: string
       format: date-time
-    AuthChallengeRequest:
+    LoginRequest:
       type: object
       additionalProperties: false
-      required: [email]
+      required: [username, password]
       properties:
-        email:
+        username:
           type: string
-          format: email
-          maxLength: 320
-    AuthChallengeAccepted:
-      type: object
-      additionalProperties: false
-      required: [challenge_id, expires_in_seconds, message]
-      properties:
-        challenge_id:
-          $ref: '#/components/schemas/Uuid'
-        expires_in_seconds:
-          type: integer
-          const: 600
-        message:
+          minLength: 3
+          maxLength: 64
+        password:
           type: string
-          maxLength: 200
-    AuthChallengeVerification:
-      type: object
-      additionalProperties: false
-      required: [code]
-      properties:
-        code:
-          type: string
-          pattern: '^[0-9]{6}$'
+          minLength: 8
+          maxLength: 128
     CurrentUser:
       type: object
       additionalProperties: false
@@ -418,7 +374,7 @@ components:
         code:
           type: string
           enum:
-            - AUTH_CHALLENGE_UNAVAILABLE
+            - AUTH_INVALID_CREDENTIALS
             - AUTH_SESSION_EXPIRED
             - RATE_LIMITED
             - RESOURCE_NOT_FOUND

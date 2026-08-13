@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, LoaderCircle, LogOut, Send, ShieldCheck, Square } from "lucide-react";
+import { ArrowRight, LoaderCircle, LogOut, Send, ShieldCheck, Square } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { api, ApiError, type ConversationDetail, type ResponseEvent } from "./api";
@@ -16,32 +16,23 @@ function LoadingScreen() {
 }
 
 function AuthScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
-  const [email, setEmail] = useState("");
-  const [challengeId, setChallengeId] = useState<string | null>(null);
-  const [code, setCode] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const requestChallenge = useMutation({
-    mutationFn: () => api.requestChallenge(email),
-    onSuccess: (result) => {
-      setChallengeId(result.challenge_id);
+  const login = useMutation({
+    mutationFn: () => api.login(username, password),
+    onSuccess: () => {
+      setPassword("");
       setError(null);
+      onAuthenticated();
     },
-    onError: (reason) => setError(reason instanceof Error ? reason.message : "请求失败。"),
-  });
-  const verifyChallenge = useMutation({
-    mutationFn: () => api.verifyChallenge(challengeId ?? "", code),
-    onSuccess: onAuthenticated,
-    onError: (reason) => setError(reason instanceof Error ? reason.message : "验证失败。"),
+    onError: (reason) => setError(reason instanceof Error ? reason.message : "登录失败。"),
   });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (challengeId) {
-      verifyChallenge.mutate();
-    } else {
-      requestChallenge.mutate();
-    }
+    login.mutate();
   };
 
   return (
@@ -61,61 +52,46 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
             </div>
           </div>
           <div className="auth-copy">
-            <h1 id="auth-title">{challengeId ? "输入验证码" : "欢迎回来"}</h1>
-            <p>
-              {challengeId
-                ? "验证码已进入内部测试邮箱。"
-                : "请输入您的邮箱以获取验证码登录。"}
-            </p>
+            <h1 id="auth-title">欢迎回来</h1>
+            <p>请输入账号和密码登录。</p>
           </div>
           <form onSubmit={submit} className="auth-form">
-            {challengeId ? (
-              <label>
-                <span>六位验证码</span>
-                <input
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                  maxLength={6}
-                  pattern="[0-9]{6}"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
-                  required
-                />
-              </label>
-            ) : (
-              <label>
-                <span>电子邮箱</span>
-                <input
-                  autoComplete="email"
-                  inputMode="email"
-                  type="email"
-                  value={email}
-                  placeholder="name@company.com"
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                />
-              </label>
-            )}
+            <label>
+              <span>账号</span>
+              <input
+                autoComplete="username"
+                maxLength={64}
+                minLength={3}
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              <span>密码</span>
+              <input
+                autoComplete="current-password"
+                maxLength={128}
+                minLength={8}
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
+            </label>
             {error && <p className="error-text" role="alert">{error}</p>}
             <button
               className="primary-button"
-              disabled={requestChallenge.isPending || verifyChallenge.isPending}
+              disabled={login.isPending}
               type="submit"
             >
-              {requestChallenge.isPending || verifyChallenge.isPending ? (
+              {login.isPending ? (
                 <LoaderCircle className="spin" size={18} aria-hidden="true" />
-              ) : challengeId ? (
-                <Check size={18} aria-hidden="true" />
               ) : (
                 <ArrowRight size={18} aria-hidden="true" />
               )}
-              {challengeId ? "验证并进入" : "发送验证码"}
+              {login.isPending ? "正在登录" : "登录"}
             </button>
-            {challengeId && (
-              <button className="text-button" type="button" onClick={() => setChallengeId(null)}>
-                使用其他邮箱
-              </button>
-            )}
           </form>
         </section>
       </main>

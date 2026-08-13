@@ -27,12 +27,12 @@ docker compose \
   --env-file "${deploy_dir}/.env" \
   -f "${deploy_dir}/compose.yml" \
   exec -T postgres \
-  pg_dump \
-  --username=arcmind \
-  --dbname=arcmind \
-  --format=custom \
-  --no-owner \
-  --no-privileges >"$temporary_file"
+  sh -c 'PGPASSWORD="$ARCMIND_RUNTIME_DATABASE_PASSWORD" pg_dump \
+    --username=arcmind_runtime \
+    --dbname=arcmind \
+    --format=custom \
+    --no-owner \
+    --no-privileges' >"$temporary_file"
 
 chmod 600 "$temporary_file"
 "${script_dir}/check-postgres-backup.sh" "$temporary_file"

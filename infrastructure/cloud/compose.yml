@@ -46,9 +46,10 @@ services:
     image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
     restart: unless-stopped
     environment:
-      ARCMIND_ALLOWED_EMAIL: ${ARCMIND_ALLOWED_EMAIL:?set ARCMIND_ALLOWED_EMAIL}
+      ARCMIND_LOGIN_USERNAME: ${ARCMIND_LOGIN_USERNAME:?set ARCMIND_LOGIN_USERNAME}
+      ARCMIND_LOGIN_PASSWORD_HASH: ${ARCMIND_LOGIN_PASSWORD_HASH:?set ARCMIND_LOGIN_PASSWORD_HASH}
       ARCMIND_COOKIE_SECURE: "true"
-      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/arcmind
+      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind_runtime:${ARCMIND_RUNTIME_DATABASE_PASSWORD:?set ARCMIND_RUNTIME_DATABASE_PASSWORD}@postgres:5432/arcmind
       ARCMIND_DEEPSEEK_API_KEY: ${ARCMIND_DEEPSEEK_API_KEY:-}
       ARCMIND_DEEPSEEK_BASE_URL: ${ARCMIND_DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       ARCMIND_DEEPSEEK_MODEL: ${ARCMIND_DEEPSEEK_MODEL:-deepseek-v4-pro}
@@ -57,18 +58,9 @@ services:
       ARCMIND_ENVIRONMENT: staging
       ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
       ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
-      ARCMIND_SMTP_FROM: ${ARCMIND_SMTP_FROM:-ArcMind <no-reply@arcmind.invalid>}
-      ARCMIND_SMTP_HOST: ${ARCMIND_SMTP_HOST:-mailpit}
-      ARCMIND_SMTP_PASSWORD: ${ARCMIND_SMTP_PASSWORD:-}
-      ARCMIND_SMTP_PORT: ${ARCMIND_SMTP_PORT:-1025}
-      ARCMIND_SMTP_SSL: ${ARCMIND_SMTP_SSL:-false}
-      ARCMIND_SMTP_STARTTLS: ${ARCMIND_SMTP_STARTTLS:-false}
-      ARCMIND_SMTP_USERNAME: ${ARCMIND_SMTP_USERNAME:-}
     depends_on:
       postgres:
         condition: service_healthy
-      mailpit:
-        condition: service_started
     networks:
       - backend
     healthcheck:
@@ -86,8 +78,9 @@ services:
     image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
     restart: unless-stopped
     environment:
-      ARCMIND_ALLOWED_EMAIL: ${ARCMIND_ALLOWED_EMAIL:?set ARCMIND_ALLOWED_EMAIL}
-      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/arcmind
+      ARCMIND_LOGIN_USERNAME: ${ARCMIND_LOGIN_USERNAME:?set ARCMIND_LOGIN_USERNAME}
+      ARCMIND_LOGIN_PASSWORD_HASH: ${ARCMIND_LOGIN_PASSWORD_HASH:?set ARCMIND_LOGIN_PASSWORD_HASH}
+      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind_runtime:${ARCMIND_RUNTIME_DATABASE_PASSWORD:?set ARCMIND_RUNTIME_DATABASE_PASSWORD}@postgres:5432/arcmind
       ARCMIND_DEEPSEEK_API_KEY: ${ARCMIND_DEEPSEEK_API_KEY:-}
       ARCMIND_DEEPSEEK_BASE_URL: ${ARCMIND_DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       ARCMIND_DEEPSEEK_MODEL: ${ARCMIND_DEEPSEEK_MODEL:-deepseek-v4-pro}
@@ -117,7 +110,8 @@ services:
     image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
     profiles: ["migration"]
     environment:
-      ARCMIND_ALLOWED_EMAIL: ${ARCMIND_ALLOWED_EMAIL:?set ARCMIND_ALLOWED_EMAIL}
+      ARCMIND_LOGIN_USERNAME: ${ARCMIND_LOGIN_USERNAME:?set ARCMIND_LOGIN_USERNAME}
+      ARCMIND_LOGIN_PASSWORD_HASH: ${ARCMIND_LOGIN_PASSWORD_HASH:?set ARCMIND_LOGIN_PASSWORD_HASH}
       ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/arcmind
       ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
       ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
@@ -132,11 +126,29 @@ services:
     image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
     profiles: ["migration"]
     environment:
-      ARCMIND_ALLOWED_EMAIL: ${ARCMIND_ALLOWED_EMAIL:?set ARCMIND_ALLOWED_EMAIL}
+      ARCMIND_LOGIN_USERNAME: ${ARCMIND_LOGIN_USERNAME:?set ARCMIND_LOGIN_USERNAME}
+      ARCMIND_LOGIN_PASSWORD_HASH: ${ARCMIND_LOGIN_PASSWORD_HASH:?set ARCMIND_LOGIN_PASSWORD_HASH}
       ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/arcmind
       ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
       ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
     command: ["python", "-m", "arcmind_cloud.queue_schema"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+
+  database-roles:
+    image: ghcr.io/crayon-312/arcmind-cloud-server:${ARCMIND_IMAGE_TAG:?set ARCMIND_IMAGE_TAG}
+    profiles: ["migration"]
+    environment:
+      ARCMIND_DATABASE_URL: postgresql+psycopg://arcmind:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/arcmind
+      ARCMIND_LOGIN_USERNAME: ${ARCMIND_LOGIN_USERNAME:?set ARCMIND_LOGIN_USERNAME}
+      ARCMIND_LOGIN_PASSWORD_HASH: ${ARCMIND_LOGIN_PASSWORD_HASH:?set ARCMIND_LOGIN_PASSWORD_HASH}
+      ARCMIND_PROOF_SECRET: ${ARCMIND_PROOF_SECRET:?set ARCMIND_PROOF_SECRET}
+      ARCMIND_PUBLIC_ORIGIN: https://${ARCMIND_PUBLIC_IP:?set ARCMIND_PUBLIC_IP}
+      ARCMIND_RUNTIME_DATABASE_PASSWORD: ${ARCMIND_RUNTIME_DATABASE_PASSWORD:?set ARCMIND_RUNTIME_DATABASE_PASSWORD}
+    command: ["python", "-m", "arcmind_cloud.database_roles"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -150,6 +162,7 @@ services:
       POSTGRES_DB: arcmind
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_USER: arcmind
+      ARCMIND_RUNTIME_DATABASE_PASSWORD: ${ARCMIND_RUNTIME_DATABASE_PASSWORD:?set ARCMIND_RUNTIME_DATABASE_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql
     networks:
@@ -161,21 +174,10 @@ services:
       retries: 20
     logging: *default-logging
 
-  mailpit:
-    image: axllent/mailpit:v1.27.8@sha256:6abc8e633df15eaf785cfcf38bae48e66f64beecdc03121e249d0f9ec15f0707
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8025:8025"
-    networks:
-      - backend
-      - management
-    logging: *default-logging
-
 networks:
   edge:
   backend:
     internal: true
-  management:
 
 volumes:
   caddy-config:

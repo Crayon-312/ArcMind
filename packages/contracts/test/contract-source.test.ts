@@ -9,7 +9,7 @@ describe("generated phase-one contract", () => {
       "utf8",
     );
 
-    expect(generated).toContain("requestAuthChallenge");
+    expect(generated).toContain("createAuthSession");
     expect(generated).toContain("streamResponseEvents");
     expect(generated).toContain("AUTH_SESSION_EXPIRED");
   });

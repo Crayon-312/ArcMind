@@ -10,10 +10,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, Header, Request, Response
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .adapters import SmtpMailAdapter
 from .config import Settings, get_settings
 from .database import get_session, session_factory
 from .errors import ApiError
@@ -21,7 +21,7 @@ from .generation import add_event
 from .jobs import cancel_response_job, enqueue_response
 from .models import (
     AssistantResponse,
-    AuthChallenge,
+    AuthLoginAttempt,
     AuthSession,
     ResponseEvent,
     User,
@@ -34,28 +34,24 @@ from .models import (
     Turn as TurnModel,
 )
 from .schemas import (
-    AuthChallengeAccepted,
-    AuthChallengeRequest,
-    AuthChallengeVerification,
+    Conversation as ConversationSchema,
+)
+from .schemas import (
     ConversationCreate,
     ConversationDetail,
     CurrentUser,
+    LoginRequest,
     ResponseAccepted,
     ResponseState,
     TextTurnCreate,
 )
 from .schemas import (
-    Conversation as ConversationSchema,
-)
-from .schemas import (
     Turn as TurnSchema,
 )
 from .security import (
-    challenge_digest,
-    constant_time_equal,
-    generate_code,
     generate_session_token,
     session_digest,
+    verify_password,
 )
 
 logger = logging.getLogger(__name__)
@@ -102,19 +98,13 @@ def source_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def select_challenge_code(settings: Settings) -> tuple[str, bool]:
-    if settings.environment == "development":
-        return "123456", False
-    return generate_code(), True
-
-
 async def authenticate_session(
     database: AsyncSession,
     settings: Settings,
     token: str | None,
 ) -> AuthContext:
     if not token:
-        raise ApiError(401, "AUTH_SESSION_EXPIRED", "登录会话已失效，请重新验证邮箱。")
+        raise ApiError(401, "AUTH_SESSION_EXPIRED", "登录会话已失效，请重新登录。")
 
     digest = session_digest(settings, token)
     result = await database.execute(
@@ -124,7 +114,7 @@ async def authenticate_session(
     )
     row = result.one_or_none()
     if row is None:
-        raise ApiError(401, "AUTH_SESSION_EXPIRED", "登录会话已失效，请重新验证邮箱。")
+        raise ApiError(401, "AUTH_SESSION_EXPIRED", "登录会话已失效，请重新登录。")
 
     auth_session, user = row
     now = utc_now()
@@ -136,7 +126,7 @@ async def authenticate_session(
     ):
         auth_session.state = "expired"
         await database.commit()
-        raise ApiError(401, "AUTH_SESSION_EXPIRED", "登录会话已失效，请重新验证邮箱。")
+        raise ApiError(401, "AUTH_SESSION_EXPIRED", "登录会话已失效，请重新登录。")
 
     auth_session.last_seen_at = now
     await database.commit()
@@ -155,31 +145,27 @@ Auth = Annotated[AuthContext, Depends(require_auth)]
 
 
 @router.post(
-    "/auth/challenges",
-    response_model=AuthChallengeAccepted,
-    status_code=202,
-    operation_id="requestAuthChallenge",
+    "/auth/session",
+    response_model=CurrentUser,
+    operation_id="createAuthSession",
 )
-async def request_auth_challenge(
-    payload: AuthChallengeRequest,
+async def create_auth_session(
+    payload: LoginRequest,
     request: Request,
+    response: Response,
     database: DatabaseSession,
     settings: SettingsDependency,
-) -> AuthChallengeAccepted:
-    email = str(payload.email).strip().casefold()
+) -> CurrentUser:
+    username = payload.username.strip().casefold()
     ip = source_ip(request)
+    await database.execute(select(func.pg_advisory_xact_lock(func.hashtext("arcmind:login-user"))))
     window_start = utc_now() - timedelta(minutes=15)
-    email_count = await database.scalar(
+    failure_count = await database.scalar(
         select(func.count())
-        .select_from(AuthChallenge)
-        .where(AuthChallenge.email == email, AuthChallenge.created_at >= window_start)
+        .select_from(AuthLoginAttempt)
+        .where(AuthLoginAttempt.source_ip == ip, AuthLoginAttempt.created_at >= window_start)
     )
-    ip_count = await database.scalar(
-        select(func.count())
-        .select_from(AuthChallenge)
-        .where(AuthChallenge.source_ip == ip, AuthChallenge.created_at >= window_start)
-    )
-    if (email_count or 0) >= 3 or (ip_count or 0) >= 10:
+    if (failure_count or 0) >= 10:
         raise ApiError(
             429,
             "RATE_LIMITED",
@@ -187,81 +173,39 @@ async def request_auth_challenge(
             retryable=True,
             retry_after_seconds=900,
         )
-
-    challenge_id = uuid.uuid4()
-    accepted = AuthChallengeAccepted(
-        challenge_id=challenge_id,
-        message="如果邮箱可用，验证码将发送到对应邮箱。",
-    )
-    if email != settings.allowed_email:
-        return accepted
-
     await database.execute(
-        update(AuthChallenge)
-        .where(AuthChallenge.email == email, AuthChallenge.state == "pending")
-        .values(state="expired")
+        delete(AuthLoginAttempt).where(AuthLoginAttempt.created_at < window_start)
     )
-    code, should_deliver = select_challenge_code(settings)
-    challenge = AuthChallenge(
-        id=challenge_id,
-        email=email,
-        code_digest=challenge_digest(settings, challenge_id, code),
-        source_ip=ip,
-        expires_at=utc_now() + timedelta(seconds=settings.challenge_ttl_seconds),
+
+    user = await database.scalar(
+        select(User).where(User.username == username).with_for_update()
     )
-    database.add(challenge)
-    await database.commit()
-
-    if should_deliver:
-        try:
-            await SmtpMailAdapter(settings).send_login_code(email, code)
-        except Exception:
-            logger.exception("mail delivery failed", extra={"challenge_id": str(challenge_id)})
-            challenge.state = "expired"
-            await database.commit()
-
-    return accepted
-
-
-@router.post(
-    "/auth/challenges/{challenge_id}/verify",
-    response_model=CurrentUser,
-    operation_id="verifyAuthChallenge",
-)
-async def verify_auth_challenge(
-    challenge_id: uuid.UUID,
-    payload: AuthChallengeVerification,
-    response: Response,
-    database: DatabaseSession,
-    settings: SettingsDependency,
-) -> CurrentUser:
-    challenge = await database.scalar(
-        select(AuthChallenge).where(AuthChallenge.id == challenge_id).with_for_update()
+    if user is None and username == settings.login_username:
+        user = await database.scalar(
+            select(User)
+            .where(User.username.is_(None))
+            .order_by(User.created_at, User.id)
+            .limit(1)
+            .with_for_update()
+        )
+    encoded = settings.effective_login_password_hash
+    credentials_valid = username == settings.login_username and verify_password(
+        payload.password, encoded
     )
-    now = utc_now()
-    if challenge is None or challenge.state != "pending":
-        raise ApiError(400, "AUTH_CHALLENGE_UNAVAILABLE", "验证码不可用，请重新获取。")
-    if now >= challenge.expires_at:
-        challenge.state = "expired"
+    if not credentials_valid:
+        database.add(AuthLoginAttempt(source_ip=ip))
         await database.commit()
-        raise ApiError(400, "AUTH_CHALLENGE_UNAVAILABLE", "验证码不可用，请重新获取。")
+        raise ApiError(401, "AUTH_INVALID_CREDENTIALS", "账号或密码错误。")
 
-    expected = challenge_digest(settings, challenge.id, payload.code)
-    if not constant_time_equal(challenge.code_digest, expected):
-        challenge.attempts += 1
-        if challenge.attempts >= 5:
-            challenge.state = "locked"
-        await database.commit()
-        raise ApiError(400, "AUTH_CHALLENGE_UNAVAILABLE", "验证码不可用，请重新获取。")
-
-    challenge.state = "consumed"
-    challenge.consumed_at = now
-    user = await database.scalar(select(User).where(User.email == challenge.email))
     if user is None:
-        user = User(email=challenge.email)
+        user = User(username=settings.login_username, password_digest=encoded)
         database.add(user)
         await database.flush()
-
+    if user.username is None:
+        user.username = settings.login_username
+    if user.password_digest != encoded:
+        user.password_digest = encoded
+    now = utc_now()
     raw_token = generate_session_token()
     auth_session = AuthSession(
         user_id=user.id,
@@ -331,22 +275,29 @@ async def create_conversation(
     database: DatabaseSession,
     auth: Auth,
 ) -> ConversationSchema:
-    existing = await database.scalar(
+    conversation_id = uuid.uuid4()
+    await database.execute(
+        insert(ConversationModel)
+        .values(
+            id=conversation_id,
+            user_id=auth.user.id,
+            idempotency_key=idempotency_key,
+            mode=payload.mode,
+            state="active",
+            version=1,
+            created_at=utc_now(),
+        )
+        .on_conflict_do_nothing(index_elements=["user_id", "idempotency_key"])
+    )
+    await database.commit()
+    conversation = await database.scalar(
         select(ConversationModel).where(
             ConversationModel.user_id == auth.user.id,
             ConversationModel.idempotency_key == idempotency_key,
         )
     )
-    if existing is not None:
-        return conversation_dto(existing)
-
-    conversation = ConversationModel(
-        user_id=auth.user.id,
-        idempotency_key=idempotency_key,
-        mode=payload.mode,
-    )
-    database.add(conversation)
-    await database.commit()
+    if conversation is None:
+        raise RuntimeError("conversation upsert did not produce a row")
     return conversation_dto(conversation)
 
 
@@ -404,10 +355,12 @@ async def create_text_turn(
     auth: Auth,
 ) -> ResponseAccepted:
     conversation = await database.scalar(
-        select(ConversationModel).where(
+        select(ConversationModel)
+        .where(
             ConversationModel.id == conversation_id,
             ConversationModel.user_id == auth.user.id,
         )
+        .with_for_update()
     )
     if conversation is None:
         raise ApiError(404, "RESOURCE_NOT_FOUND", "没有找到对应资源。")

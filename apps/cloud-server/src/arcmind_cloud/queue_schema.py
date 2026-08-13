@@ -1,5 +1,4 @@
-import asyncio
-
+from .asyncio_runtime import run
 from .jobs import queue_app
 
 
@@ -9,4 +8,4 @@ async def apply_queue_schema() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(apply_queue_schema())
+    run(apply_queue_schema())

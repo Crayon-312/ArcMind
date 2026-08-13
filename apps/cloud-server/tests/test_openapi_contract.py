@@ -1,7 +1,13 @@
+from pathlib import Path
 from typing import Any, cast
 
 import yaml
 from pytest import MonkeyPatch
+
+CONTRACT_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "knowledge/04-接口与事件/openapi/phase-1.yaml"
+)
 
 
 def test_reviewed_operations_match_fastapi(monkeypatch: MonkeyPatch) -> None:
@@ -10,7 +16,7 @@ def test_reviewed_operations_match_fastapi(monkeypatch: MonkeyPatch) -> None:
         "postgresql+psycopg://arcmind:test@localhost/arcmind",
     )
     monkeypatch.setenv("ARCMIND_PUBLIC_ORIGIN", "https://127.0.0.1")
-    monkeypatch.setenv("ARCMIND_ALLOWED_EMAIL", "owner@example.invalid")
+    monkeypatch.setenv("ARCMIND_LOGIN_USERNAME", "owner")
     monkeypatch.setenv("ARCMIND_PROOF_SECRET", "a" * 32)
 
     from arcmind_cloud.main import app
@@ -19,7 +25,7 @@ def test_reviewed_operations_match_fastapi(monkeypatch: MonkeyPatch) -> None:
         dict[str, Any],
         yaml.safe_load(
             open(  # noqa: PTH123, SIM115
-                "../../knowledge/04-接口与事件/openapi/phase-1.yaml",
+                CONTRACT_PATH,
                 encoding="utf-8",
             )
         ),

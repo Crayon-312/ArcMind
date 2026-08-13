@@ -15,17 +15,11 @@ class Settings(BaseSettings):
 
     environment: Literal["development", "staging", "production"] = "development"
     database_url: str
+    runtime_database_password: SecretStr | None = None
     public_origin: str
-    allowed_email: str
+    login_username: str = "owner"
+    login_password_hash: SecretStr | None = None
     proof_secret: SecretStr = Field(min_length=32)
-    smtp_host: str = "mailpit"
-    smtp_port: int = Field(default=1025, ge=1, le=65535)
-    smtp_from: str = "ArcMind <no-reply@arcmind.invalid>"
-    smtp_username: str | None = None
-    smtp_password: SecretStr | None = None
-    smtp_starttls: bool = False
-    smtp_ssl: bool = False
-    smtp_timeout_seconds: float = Field(default=10, gt=0, le=60)
     deepseek_api_key: SecretStr | None = None
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-v4-pro"
@@ -34,14 +28,16 @@ class Settings(BaseSettings):
     response_event_poll_seconds: float = Field(default=0.25, gt=0, le=2)
     response_heartbeat_seconds: float = Field(default=15, ge=5, le=60)
     cookie_secure: bool = True
-    challenge_ttl_seconds: int = 600
     session_idle_seconds: int = 7 * 24 * 60 * 60
     session_absolute_seconds: int = 30 * 24 * 60 * 60
 
-    @field_validator("allowed_email")
+    @field_validator("login_username")
     @classmethod
-    def normalize_allowed_email(cls, value: str) -> str:
-        return value.strip().casefold()
+    def normalize_login_username(cls, value: str) -> str:
+        normalized = value.strip().casefold()
+        if not 3 <= len(normalized) <= 64:
+            raise ValueError("login_username must contain 3 to 64 characters")
+        return normalized
 
     @field_validator("database_url")
     @classmethod
@@ -55,15 +51,9 @@ class Settings(BaseSettings):
     def normalize_origin(cls, value: str) -> str:
         return value.rstrip("/")
 
-    @field_validator("smtp_username", mode="before")
-    @classmethod
-    def normalize_optional_username(cls, value: object) -> object:
-        if isinstance(value, str):
-            normalized = value.strip()
-            return normalized or None
-        return value
-
-    @field_validator("smtp_password", "deepseek_api_key", mode="before")
+    @field_validator(
+        "login_password_hash", "runtime_database_password", "deepseek_api_key", mode="before"
+    )
     @classmethod
     def normalize_optional_secret(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
@@ -79,12 +69,17 @@ class Settings(BaseSettings):
         return normalized
 
     @model_validator(mode="after")
-    def validate_smtp_security(self) -> Self:
-        if self.smtp_starttls and self.smtp_ssl:
-            raise ValueError("smtp_starttls and smtp_ssl are mutually exclusive")
-        if (self.smtp_username is None) != (self.smtp_password is None):
-            raise ValueError("smtp_username and smtp_password must be configured together")
+    def validate_login_security(self) -> Self:
+        if self.environment != "development" and self.login_password_hash is None:
+            raise ValueError("login_password_hash is required outside development")
         return self
+
+    @property
+    def effective_login_password_hash(self) -> str:
+        if self.login_password_hash is not None:
+            return self.login_password_hash.get_secret_value()
+        # Development-only hash for the documented local password: arcmind-dev
+        return "scrypt$16384$8$1$YXJjbWluZC1kZXYtc2FsdA$lkBOAEn-nRXjkKXpgKRp1Hm1oSjdUQX-1TgEI8vLqs8"
 
 
 @lru_cache

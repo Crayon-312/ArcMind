@@ -2,25 +2,16 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class AuthChallengeRequest(StrictModel):
-    email: EmailStr
-
-
-class AuthChallengeAccepted(StrictModel):
-    challenge_id: uuid.UUID
-    expires_in_seconds: Literal[600] = 600
-    message: str = Field(max_length=200)
-
-
-class AuthChallengeVerification(StrictModel):
-    code: str = Field(pattern=r"^[0-9]{6}$")
+class LoginRequest(StrictModel):
+    username: str = Field(min_length=3, max_length=64)
+    password: str = Field(min_length=8, max_length=128)
 
 
 class CurrentUser(StrictModel):

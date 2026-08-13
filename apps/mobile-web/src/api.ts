@@ -53,15 +53,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   me: () => request<CurrentUser>("/me"),
-  requestChallenge: (email: string) =>
-    request<components["schemas"]["AuthChallengeAccepted"]>("/auth/challenges", {
+  login: (username: string, password: string) =>
+    request<CurrentUser>("/auth/session", {
       method: "POST",
-      body: JSON.stringify({ email }),
-    }),
-  verifyChallenge: (challengeId: string, code: string) =>
-    request<CurrentUser>(`/auth/challenges/${challengeId}/verify`, {
-      method: "POST",
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ username, password }),
     }),
   logout: () => request<void>("/auth/sessions/current", { method: "DELETE" }),
   createConversation: () =>

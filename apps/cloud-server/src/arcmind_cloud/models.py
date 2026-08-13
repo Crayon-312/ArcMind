@@ -12,6 +12,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -29,7 +30,9 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
+    email: Mapped[str | None] = mapped_column(String(320), unique=True)
+    username: Mapped[str | None] = mapped_column(String(64), unique=True)
+    password_digest: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
     locale: Mapped[str] = mapped_column(String(35), default="zh-CN", nullable=False)
     time_zone: Mapped[str] = mapped_column(String(64), default="Asia/Shanghai", nullable=False)
@@ -38,21 +41,12 @@ class User(Base):
     )
 
 
-class AuthChallenge(Base):
-    __tablename__ = "auth_challenges"
-    __table_args__ = (
-        Index("ix_auth_challenges_email_created", "email", "created_at"),
-        Index("ix_auth_challenges_source_created", "source_ip", "created_at"),
-    )
+class AuthLoginAttempt(Base):
+    __tablename__ = "auth_login_attempts"
+    __table_args__ = (Index("ix_auth_login_attempts_source_created", "source_ip", "created_at"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    email: Mapped[str] = mapped_column(String(320), nullable=False)
-    code_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_ip: Mapped[str] = mapped_column(String(45), nullable=False)
-    state: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
-    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
@@ -119,6 +113,12 @@ class AssistantResponse(Base):
         UniqueConstraint("user_id", "idempotency_key"),
         UniqueConstraint("user_turn_id"),
         UniqueConstraint("job_id"),
+        Index(
+            "uq_assistant_responses_one_active_per_conversation",
+            "conversation_id",
+            unique=True,
+            postgresql_where=text("state IN ('queued', 'generating')"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

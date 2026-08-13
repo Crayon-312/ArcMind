@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/auth/challenges": {
+    "/auth/session": {
         parameters: {
             query?: never;
             header?: never;
@@ -13,23 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["requestAuthChallenge"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/challenges/{challenge_id}/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["verifyAuthChallenge"];
+        post: operations["createAuthSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -172,18 +156,9 @@ export interface components {
         Uuid: string;
         /** Format: date-time */
         Timestamp: string;
-        AuthChallengeRequest: {
-            /** Format: email */
-            email: string;
-        };
-        AuthChallengeAccepted: {
-            challenge_id: components["schemas"]["Uuid"];
-            /** @constant */
-            expires_in_seconds: 600;
-            message: string;
-        };
-        AuthChallengeVerification: {
-            code: string;
+        LoginRequest: {
+            username: string;
+            password: string;
         };
         CurrentUser: {
             id: components["schemas"]["Uuid"];
@@ -243,7 +218,7 @@ export interface components {
         };
         Error: {
             /** @enum {string} */
-            code: "AUTH_CHALLENGE_UNAVAILABLE" | "AUTH_SESSION_EXPIRED" | "RATE_LIMITED" | "RESOURCE_NOT_FOUND" | "RESPONSE_IN_PROGRESS" | "MODEL_RATE_LIMITED" | "MODEL_TIMEOUT" | "MODEL_UNAVAILABLE" | "RESPONSE_REPLAY_WINDOW_EXPIRED";
+            code: "AUTH_INVALID_CREDENTIALS" | "AUTH_SESSION_EXPIRED" | "RATE_LIMITED" | "RESOURCE_NOT_FOUND" | "RESPONSE_IN_PROGRESS" | "MODEL_RATE_LIMITED" | "MODEL_TIMEOUT" | "MODEL_UNAVAILABLE" | "RESPONSE_REPLAY_WINDOW_EXPIRED";
             message: string;
             retryable: boolean;
             retry_after_seconds?: number;
@@ -254,8 +229,8 @@ export interface components {
         };
     };
     responses: {
-        /** @description Challenge is invalid, expired, locked, consumed, or otherwise unavailable. */
-        ChallengeUnavailable: {
+        /** @description Username or password is invalid without disclosing which value failed. */
+        InvalidCredentials: {
             headers: {
                 [name: string]: unknown;
             };
@@ -302,7 +277,6 @@ export interface components {
         };
     };
     parameters: {
-        ChallengeId: components["schemas"]["Uuid"];
         ConversationId: components["schemas"]["Uuid"];
         ResponseId: components["schemas"]["Uuid"];
         IdempotencyKey: string;
@@ -313,7 +287,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    requestAuthChallenge: {
+    createAuthSession: {
         parameters: {
             query?: never;
             header?: never;
@@ -322,38 +296,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AuthChallengeRequest"];
+                "application/json": components["schemas"]["LoginRequest"];
             };
         };
         responses: {
-            /** @description Request accepted without disclosing account state. */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthChallengeAccepted"];
-                };
-            };
-            429: components["responses"]["RateLimited"];
-        };
-    };
-    verifyAuthChallenge: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: components["parameters"]["ChallengeId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AuthChallengeVerification"];
-            };
-        };
-        responses: {
-            /** @description Challenge consumed and session created. */
+            /** @description Credentials accepted and session created. */
             200: {
                 headers: {
                     "Set-Cookie"?: string;
@@ -363,7 +310,7 @@ export interface operations {
                     "application/json": components["schemas"]["CurrentUser"];
                 };
             };
-            400: components["responses"]["ChallengeUnavailable"];
+            401: components["responses"]["InvalidCredentials"];
             429: components["responses"]["RateLimited"];
         };
     };

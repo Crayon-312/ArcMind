@@ -1,54 +1,11 @@
 import asyncio
-import smtplib
-import ssl
 from collections.abc import AsyncIterator
-from email.message import EmailMessage
 from typing import Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from .config import Settings
-
-
-class SmtpMailAdapter:
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-
-    async def send_login_code(self, recipient: str, code: str) -> None:
-        message = EmailMessage()
-        message["From"] = self.settings.smtp_from
-        message["To"] = recipient
-        message["Subject"] = "ArcMind 登录验证码"
-        message.set_content(f"你的 ArcMind 登录验证码是：{code}\n\n验证码 10 分钟内有效。")
-
-        def send() -> None:
-            context = ssl.create_default_context()
-            if self.settings.smtp_ssl:
-                client_context = smtplib.SMTP_SSL(
-                    self.settings.smtp_host,
-                    self.settings.smtp_port,
-                    timeout=self.settings.smtp_timeout_seconds,
-                    context=context,
-                )
-            else:
-                client_context = smtplib.SMTP(
-                    self.settings.smtp_host,
-                    self.settings.smtp_port,
-                    timeout=self.settings.smtp_timeout_seconds,
-                )
-
-            with client_context as client:
-                if self.settings.smtp_starttls:
-                    client.starttls(context=context)
-                if self.settings.smtp_username and self.settings.smtp_password:
-                    client.login(
-                        self.settings.smtp_username,
-                        self.settings.smtp_password.get_secret_value(),
-                    )
-                client.send_message(message)
-
-        await asyncio.to_thread(send)
 
 
 class DeterministicModelProvider:
