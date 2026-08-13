@@ -1,6 +1,6 @@
 ---
 type: task-capsule
-status: active
+status: superseded
 task_id: "0012"
 created: 2026-08-07
 updated: 2026-08-07
@@ -8,6 +8,8 @@ change_level: S3
 ---
 
 # 方案落实台账：首个生产可用文字闭环
+
+> 本任务中真实 SMTP 与邮箱验证码相关的未完成目标已由[账号密码登录与数据库并发收敛](./0016-simple-login-and-database-hardening.md)替代；历史已完成实现和生产证据继续保留。真实模型、恢复演练等剩余事项应在后续独立任务中承接。
 
 ## 关系导航
 
@@ -95,7 +97,7 @@ change_level: S3
 | 6 | P6 | 运行仓库门禁并部署不含真实凭据的更新 | P2-P5 | 本地检查、CI（持续集成）和新 VPS 健康通过；旧 VPS 零操作 | done |
 | 7 | P7 | 配置用户长期 SSH 密钥并轮换已暴露密码 | P6、用户公钥 | 两台常用电脑密钥登录通过并保留恢复路径后，才关闭密码登录 | blocked_external |
 | 8 | P8 | 接入异地加密备份和告警通知 | P3、外部凭据 | 日备份离开 VPS，低于 48 小时告警可达，凭据仅在部署环境 | blocked_external |
-| 9 | P9 | 配置并验收真实 SMTP | P4、SMTP 凭据 | 目标邮箱收到验证码，日志和数据库无原始验证码或密钥 | blocked_external |
+| 9 | P9 | 配置并验收真实 SMTP | P4、SMTP 凭据 | 目标邮箱收到验证码，日志和数据库无原始验证码或密钥 | superseded |
 | 10 | P10 | 实现耐久流式模型生成和取消 | P5 | TXT-001、TXT-005、TXT-008、TXT-009、TXT-011 通过 | done |
 | 11 | P11 | 配置并验收真实 DeepSeek | P10、API 密钥 | 中文、流式、取消、故障分类、工具和结构化固定用例通过 | blocked_external |
 | 12 | P12 | 完成真实手机与恢复演练并发布正式事实 | P7-P11 | OPS-003、OPS-005、OPS-006 与独立临时库实际恢复通过 | blocked_external |

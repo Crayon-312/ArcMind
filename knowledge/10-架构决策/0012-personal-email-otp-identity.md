@@ -1,15 +1,17 @@
 ---
 id: "arcmind-doc-decisions-0012-personal-email-otp-identity"
 type: "decision"
-status: "current"
-summary: "首版身份只允许一个配置邮箱，使用六位一次性验证码和可撤销服务端会话，不建设公开注册与租户体系。"
+status: "deprecated"
+summary: "邮箱验证码身份方案已经废弃，仅保留为旧版本和历史取舍记录；新实现不得继续以此为目标。"
 scope: ["decisions"]
 tags: ["arcmind-v2", "decisions"]
 confidence: "high"
-last_verified: "2026-08-06"
+last_verified: "2026-08-13"
 ---
 
 # 决策 0012：本人优先的邮箱验证码身份基线
+
+> 状态：已废弃。当前目标设计见[决策 0018：单一账号密码身份基线](./0018-simple-login-identity.md)。截至 2026-08-13，生产代码仍运行本页描述的旧实现，迁移进度见[任务舱 0016](../14-开发方案/0016-simple-login-and-database-hardening.md)。以下内容仅用于历史追溯。
 
 状态：accepted
 日期：2026-08-06

@@ -6,7 +6,7 @@ summary: "手机端通过版本化 HTTPS API 操作身份、会话和任务，�
 scope: ["contracts"]
 tags: ["arcmind-v2", "contracts"]
 confidence: "medium"
-last_verified: "2026-08-06"
+last_verified: "2026-08-13"
 ---
 
 # 云端公开 API 契约草案
@@ -20,7 +20,7 @@ last_verified: "2026-08-06"
 - 客户端边界：[手机 Web 端](../06-前端设计/01-手机Web端设计.md)、[手机 Web 模块](../06-前端设计/03-手机Web模块.md)
 - 业务来源：[实时对话与任务形成](../02-业务模型/03-实时对话与任务形成.md)、[身份与工作机绑定](../02-业务模型/04-身份与工作机绑定.md)
 - 事件语义：[跨端事件契约基线](./01-跨端事件契约.md)
-- 身份决策：[本人优先的邮箱验证码身份基线](../10-架构决策/0012-personal-email-otp-identity.md)
+- 身份决策：[单一账号密码身份基线](../10-架构决策/0018-simple-login-identity.md)
 - 事件决策：[文字闭环使用 SSE 事件通道](../10-架构决策/0014-sse-text-event-channel.md)
 - 第一阶段机器契约：[第一阶段机器契约](./04-第一阶段机器契约.md)
 
@@ -42,14 +42,13 @@ last_verified: "2026-08-06"
 
 | 方法 | 路径 | 用途 | 状态 |
 |---|---|---|---|
-| `POST` | `/auth/challenges` | 发起邮箱验证码挑战 | accepted |
-| `POST` | `/auth/challenges/{challenge_id}/verify` | 一次性消费验证码并创建 Web 会话 | accepted |
+| `POST` | `/auth/session` | 使用单一账号密码创建 Web 会话 | proposed |
 | `DELETE` | `/auth/sessions/current` | 退出当前会话 | accepted |
 | `DELETE` | `/auth/sessions` | 撤销当前用户全部 Web 会话 | accepted |
 | `GET` | `/me` | 获取当前用户和基础偏好 | accepted |
 | `PATCH` | `/me/preferences` | 更新时区、语言和交互偏好 | accepted |
 
-发起挑战只接收归一化前的邮箱文本，响应始终为 `202` 和不泄露账号状态的统一摘要。验证请求只包含验证码；成功响应设置 `__Host-arcmind_session` 安全 Cookie，正文不返回会话令牌。验证码无效、过期、锁定或已消费统一使用 `AUTH_CHALLENGE_UNAVAILABLE`。
+登录只接收账号和密码；成功响应设置 `__Host-arcmind_session` 安全 Cookie，正文不返回会话令牌。错误账号和错误密码统一使用 `AUTH_INVALID_CREDENTIALS`，不得泄露用户登记情况。当前 OpenAPI 机器契约和运行代码仍是验证码旧版本，必须在[任务舱 0016](../14-开发方案/0016-simple-login-and-database-hardening.md)中与前后端实现同步切换。
 
 ## 会话资源
 
@@ -123,7 +122,7 @@ last_verified: "2026-08-06"
 | 类别 | 示例 | 客户端处理 |
 |---|---|---|
 | 身份失效 | `AUTH_SESSION_EXPIRED` | 清理交互状态并重新登录 |
-| 验证挑战不可用 | `AUTH_CHALLENGE_UNAVAILABLE` | 受限请求新验证码，不推断具体原因 |
+| 登录凭据无效 | `AUTH_INVALID_CREDENTIALS` | 保留账号输入，不推断账号或密码哪一项错误 |
 | 版本冲突 | `TASK_PLAN_VERSION_CONFLICT` | 刷新真实数据后重新确认 |
 | 权限拒绝 | `ACTION_NOT_ALLOWED` | 不自动重试，展示范围 |
 | 资源离线 | `WORKSTATION_OFFLINE` | 展示等待、换设备或取消 |
@@ -133,4 +132,4 @@ last_verified: "2026-08-06"
 ## 待定项
 
 - 大型产物上传、下载和临时访问契约。
-- 任务、实时语音、工作机、提醒和记忆资源的机器契约；身份与文字闭环已由[第一阶段机器契约](./04-第一阶段机器契约.md)定稿。
+- 账号密码身份接口以及任务、实时语音、工作机、提醒和记忆资源的机器契约；当前机器契约仍记录待迁移的验证码旧实现。

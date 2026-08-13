@@ -36,7 +36,7 @@ change_level: S3
 | 架构 | PostgreSQL 成为唯一主事实库 | current | [决策 0008](../10-架构决策/0008-primary-data-stack.md) |
 | 数据 | 定义表组、字段、事务、幂等和检索边界 | current | [数据存储、事务与检索设计](../05-数据模型/01-数据存储事务与检索.md) |
 | Agent | Checkpoint 与领域任务事实隔离 | current | [数据存储、事务与检索设计](../05-数据模型/01-数据存储事务与检索.md) |
-| 安全 | 运行、迁移和备份账号职责分离 | current | [决策 0008](../10-架构决策/0008-primary-data-stack.md) |
+| 安全 | 运行账号与所有者/迁移账号两档隔离；不再单拆备份账号 | superseded_by_0018 | [决策 0018](../10-架构决策/0018-simple-login-identity.md) |
 | 隐私 | 备份恢复后重放删除清单 | current | [数据存储、事务与检索设计](../05-数据模型/01-数据存储事务与检索.md) |
 | 发布 | 定义分阶段迁移、备份和恢复演练 | current | [决策 0008](../10-架构决策/0008-primary-data-stack.md) |
 | 记忆 | 关闭数据库开放问题并保留队列、保留期等专项问题 | mixed | `.agent-context/memory-sources/` |
