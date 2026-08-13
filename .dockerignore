@@ -7,11 +7,11 @@
 **/.ruff_cache
 **/dist
 **/node_modules
-docs/*
-!docs/contracts
-docs/contracts/*
-!docs/contracts/openapi
-docs/contracts/openapi/*
-!docs/contracts/openapi/phase-1.yaml
+knowledge/*
+!knowledge/04-接口与事件
+knowledge/04-接口与事件/*
+!knowledge/04-接口与事件/openapi
+knowledge/04-接口与事件/openapi/*
+!knowledge/04-接口与事件/openapi/phase-1.yaml
 out
 release

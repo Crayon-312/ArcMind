@@ -1,0 +1,39 @@
+{
+  "collapse-filter": true,
+  "search": "-path:\"14-开发方案\" -path:\"90-模板\" -path:\"99-归档\" -path:\"_attachments\"",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": true,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "path:\"00-入口\" OR path:\"01-项目定义\" OR path:\"02-业务模型\"",
+      "color": { "a": 1, "rgb": 39423 }
+    },
+    {
+      "query": "path:\"03-系统架构\" OR path:\"04-接口与事件\" OR path:\"05-数据模型\" OR path:\"06-前端设计\" OR path:\"07-后端设计\" OR path:\"08-安全与合规\"",
+      "color": { "a": 1, "rgb": 15158332 }
+    },
+    {
+      "query": "path:\"09-技术调研\" OR path:\"10-架构决策\" OR path:\"11-测试与验收\" OR path:\"12-运行手册\" OR path:\"13-已知问题\" OR path:\"15-发布记录\"",
+      "color": { "a": 1, "rgb": 16750899 }
+    },
+    {
+      "query": "path:\"20-Agent运行时\" OR path:\"21-实时语音\" OR path:\"22-工作机执行端\" OR path:\"23-任务与提醒\" OR path:\"24-产品记忆与上下文\"",
+      "color": { "a": 1, "rgb": 10040012 }
+    }
+  ],
+  "collapse-display": true,
+  "showArrow": true,
+  "textFadeMultiplier": 0.15,
+  "nodeSizeMultiplier": 1.1,
+  "lineSizeMultiplier": 1.05,
+  "collapse-forces": true,
+  "centerStrength": 0.48,
+  "repelStrength": 12,
+  "linkStrength": 1,
+  "linkDistance": 210,
+  "scale": 0.6,
+  "close": true
+}

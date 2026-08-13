@@ -1,98 +1,70 @@
-[CmdletBinding()]
-param(
-    [string]$ProjectRoot = "",
-    [switch]$AllowPlaceholders
-)
+﻿[CmdletBinding()]
+param([string]$ProjectRoot = "")
 
 $ErrorActionPreference = "Stop"
-$Issues = New-Object System.Collections.Generic.List[string]
-$SensitivePatterns = @(
-    "(?i)\b(api[_-]?key|token|access[_-]?token|refresh[_-]?token|secret|password|passwd|pwd|credential|private[_-]?key|cookie|session[_-]?id)\b",
-    "\u8d26\u53f7",
-    "\u5bc6\u7801",
-    "\u5bc6\u94a5",
-    "\u51ed\u636e",
-    "\u79c1\u94a5",
-    "\u8bbf\u95ee\u4ee4\u724c",
-    "\u5237\u65b0\u4ee4\u724c",
-    "\u771f\u5b9e\u9690\u79c1"
-)
-
 if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
     $ProjectRoot = Split-Path -Parent $PSScriptRoot
 }
+$Root = (Resolve-Path -LiteralPath $ProjectRoot).Path
+$Vault = Join-Path $Root "knowledge"
+$Issues = New-Object System.Collections.Generic.List[string]
 
-function Add-Issue {
-    param([string]$Message)
+function Add-Issue([string]$Message) {
     $Issues.Add($Message) | Out-Null
 }
 
-function Test-RequiredFile {
-    param([string]$RelativePath)
-    $Path = Join-Path $Root $RelativePath
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+function Test-RequiredFile([string]$RelativePath) {
+    if (-not (Test-Path -LiteralPath (Join-Path $Root $RelativePath) -PathType Leaf)) {
         Add-Issue "Missing file: $RelativePath"
     }
 }
 
-function Test-RequiredDirectory {
-    param([string]$RelativePath)
-    $Path = Join-Path $Root $RelativePath
-    if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+function Test-RequiredDirectory([string]$RelativePath) {
+    if (-not (Test-Path -LiteralPath (Join-Path $Root $RelativePath) -PathType Container)) {
         Add-Issue "Missing directory: $RelativePath"
     }
 }
 
-function Test-ContainsText {
-    param([string]$RelativePath, [string]$ExpectedText)
-    $Path = Join-Path $Root $RelativePath
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        return
+function Get-FrontmatterValue([string]$Content, [string]$Field) {
+    foreach ($Line in ($Content -split "`r?`n")) {
+        if ($Line -match ('^' + [regex]::Escape($Field) + ':\s*(.*)$')) {
+            return $Matches[1].Trim().Trim('"').Trim("'")
+        }
     }
-
-    $Content = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
-    if (-not $Content.Contains($ExpectedText)) {
-        Add-Issue "File '$RelativePath' does not reference '$ExpectedText'"
-    }
+    return ''
 }
 
-function Test-NonPlaceholder {
-    param([string]$Value, [string]$Field)
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        Add-Issue "$Field must not be empty"
-        return
+function Get-InternalMarkdownTargets([string]$FilePath) {
+    $Targets = New-Object System.Collections.Generic.List[string]
+    $File = Get-Item -LiteralPath $FilePath
+    $Content = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
+    foreach ($Match in [regex]::Matches($Content, '(?<!!)\[[^\]]+\]\(([^)]+)\)')) {
+        $Target = $Match.Groups[1].Value.Trim()
+        if ($Target -match '^(https?://|#|mailto:)') { continue }
+        $PathPart = ($Target -split '#', 2)[0]
+        if ([string]::IsNullOrWhiteSpace($PathPart)) { continue }
+        $Decoded = [Uri]::UnescapeDataString($PathPart).Replace('/', '\')
+        $Resolved = [IO.Path]::GetFullPath((Join-Path $File.DirectoryName $Decoded))
+        if ([IO.Path]::GetExtension($Resolved) -eq '.md') {
+            $Targets.Add($Resolved) | Out-Null
+        }
     }
-
-    if (-not $AllowPlaceholders -and ($Value -match "<[^>]+>" -or $Value -match "YYYY")) {
-        Add-Issue "$Field still contains a placeholder"
-    }
+    return $Targets.ToArray()
 }
 
 function Test-MarkdownLinks {
-    $MarkdownPaths = @(& git -C $Root ls-files --cached --others --exclude-standard -- "*.md" 2>$null)
-    if ($LASTEXITCODE -ne 0) {
-        Add-Issue "Unable to list project Markdown files with Git"
-        return
-    }
-
-    foreach ($RelativePath in $MarkdownPaths) {
-        $FilePath = Join-Path $Root $RelativePath
-        if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
-            continue
-        }
-        $File = Get-Item -LiteralPath $FilePath
+    $MarkdownFiles = @(Get-ChildItem -LiteralPath $Root -Recurse -File -Filter '*.md' | Where-Object {
+        $_.FullName -notmatch '[\\/](node_modules|\.git|\.claude|\.venv)[\\/]'
+    })
+    foreach ($File in $MarkdownFiles) {
         $Content = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
-        $Matches = [regex]::Matches($Content, "\[[^\]]+\]\(([^)]+)\)")
-        foreach ($Match in $Matches) {
+        foreach ($Match in [regex]::Matches($Content, '(?<!!)\[[^\]]+\]\(([^)]+)\)')) {
             $Target = $Match.Groups[1].Value.Trim()
-            if ($Target -match "^(https?://|#|mailto:)") {
-                continue
-            }
-            $TargetPath = ($Target -split "#", 2)[0]
-            if ([string]::IsNullOrWhiteSpace($TargetPath)) {
-                continue
-            }
-            $Resolved = Join-Path $File.DirectoryName $TargetPath
+            if ($Target -match '^(https?://|#|mailto:)') { continue }
+            $PathPart = ($Target -split '#', 2)[0]
+            if ([string]::IsNullOrWhiteSpace($PathPart)) { continue }
+            $Decoded = [Uri]::UnescapeDataString($PathPart).Replace('/', '\')
+            $Resolved = [IO.Path]::GetFullPath((Join-Path $File.DirectoryName $Decoded))
             if (-not (Test-Path -LiteralPath $Resolved)) {
                 Add-Issue "Broken Markdown link in '$($File.FullName.Substring($Root.Length + 1))': $Target"
             }
@@ -100,240 +72,190 @@ function Test-MarkdownLinks {
     }
 }
 
-function Get-InternalMarkdownTargets {
-    param([string]$FilePath)
+function Test-KnowledgeLayout {
+    if (-not (Test-Path -LiteralPath $Vault -PathType Container)) { return }
 
-    $Targets = New-Object System.Collections.Generic.List[string]
-    $File = Get-Item -LiteralPath $FilePath
-    $Content = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
-    $Matches = [regex]::Matches($Content, "\[[^\]]+\]\(([^)]+)\)")
-    foreach ($Match in $Matches) {
-        $Target = $Match.Groups[1].Value.Trim()
-        if ($Target -match "^(https?://|#|mailto:)") {
+    if (Test-Path -LiteralPath (Join-Path $Root 'docs')) {
+        Add-Issue "Legacy docs knowledge root must not exist"
+    }
+
+    $AllowedTopDirectories = @(
+        '.obsidian', '00-入口', '01-项目定义', '02-业务模型', '03-系统架构',
+        '04-接口与事件', '05-数据模型', '06-前端设计', '07-后端设计',
+        '08-安全与合规', '09-技术调研', '10-架构决策', '11-测试与验收',
+        '12-运行手册', '13-已知问题', '14-开发方案', '15-发布记录',
+        '20-Agent运行时', '21-实时语音', '22-工作机执行端', '23-任务与提醒',
+        '24-产品记忆与上下文', '90-模板', '99-归档', '_attachments'
+    )
+    foreach ($Directory in Get-ChildItem -LiteralPath $Vault -Directory) {
+        if ($AllowedTopDirectories -notcontains $Directory.Name) {
+            Add-Issue "Unregistered top-level knowledge directory: $($Directory.Name)"
+        }
+    }
+
+    $DomainMaps = [ordered]@{
+        '01-项目定义' = '00-项目定义地图.md'
+        '02-业务模型' = '00-业务模型地图.md'
+        '03-系统架构' = '00-系统架构地图.md'
+        '04-接口与事件' = '00-接口与事件地图.md'
+        '05-数据模型' = '00-数据模型地图.md'
+        '06-前端设计' = '00-前端设计地图.md'
+        '07-后端设计' = '00-后端设计地图.md'
+        '08-安全与合规' = '00-安全与合规地图.md'
+        '09-技术调研' = '00-技术调研地图.md'
+        '10-架构决策' = '00-架构决策地图.md'
+        '11-测试与验收' = '00-测试与验收地图.md'
+        '12-运行手册' = '00-运行手册地图.md'
+        '13-已知问题' = '00-已知问题地图.md'
+        '15-发布记录' = '00-发布记录地图.md'
+        '20-Agent运行时' = '00-Agent运行时地图.md'
+        '21-实时语音' = '00-实时语音地图.md'
+        '22-工作机执行端' = '00-工作机执行端地图.md'
+        '23-任务与提醒' = '00-任务与提醒地图.md'
+        '24-产品记忆与上下文' = '00-产品记忆与上下文地图.md'
+    }
+    foreach ($Entry in $DomainMaps.GetEnumerator()) {
+        $DomainRoot = Join-Path $Vault $Entry.Key
+        $MapPath = Join-Path $DomainRoot $Entry.Value
+        if (-not (Test-Path -LiteralPath $MapPath -PathType Leaf)) {
+            Add-Issue "Knowledge domain is missing its unique map: knowledge/$($Entry.Key)/$($Entry.Value)"
             continue
         }
-        $TargetPath = ($Target -split "#", 2)[0]
-        if ([string]::IsNullOrWhiteSpace($TargetPath)) {
-            continue
-        }
-        $Resolved = [System.IO.Path]::GetFullPath((Join-Path $File.DirectoryName $TargetPath))
-        if ([System.IO.Path]::GetExtension($Resolved) -eq ".md") {
-            $Targets.Add($Resolved) | Out-Null
-        }
-    }
-    return $Targets.ToArray()
-}
-
-function Test-KnowledgeGraph {
-    $DocsRoot = Join-Path $Root "docs"
-    if (-not (Test-Path -LiteralPath $DocsRoot -PathType Container)) {
-        return
-    }
-
-    $MarkdownFiles = @(Get-ChildItem -LiteralPath $DocsRoot -Recurse -File -Filter "*.md")
-    $KnownPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-    $Degrees = @{}
-    foreach ($File in $MarkdownFiles) {
-        $KnownPaths.Add($File.FullName) | Out-Null
-        $Degrees[$File.FullName] = 0
-    }
-
-    foreach ($File in $MarkdownFiles) {
-        foreach ($Target in @(Get-InternalMarkdownTargets $File.FullName)) {
-            if ($KnownPaths.Contains($Target)) {
-                $Degrees[$File.FullName]++
-                $Degrees[$Target]++
-            }
-        }
-    }
-
-    foreach ($File in $MarkdownFiles) {
-        $Content = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
-        $IsPublishedKnowledge = [regex]::IsMatch($Content, '(?m)^status:\s*"?current"?\s*$') -or [regex]::IsMatch($Content, '(?m)^\u72b6\u6001\uff1a(current|accepted)\s*$')
-        $LinkDegree = [int]$Degrees[$File.FullName]
-        if ($IsPublishedKnowledge -and $LinkDegree -eq 0) {
-            Add-Issue "Current knowledge document is isolated: $($File.FullName.Substring($Root.Length + 1))"
-        }
-    }
-
-    $KnowledgeDomains = [ordered]@{
-        "product" = "00-product-map.md"
-        "domain" = "00-domain-map.md"
-        "architecture" = "00-architecture-map.md"
-        "modules" = "00-modules-map.md"
-        "business" = "00-business-map.md"
-        "contracts" = "00-contracts-map.md"
-        "decisions" = "00-decisions-map.md"
-        "plans" = "00-plans-map.md"
-        "quality" = "00-quality-map.md"
-    }
-    foreach ($Entry in $KnowledgeDomains.GetEnumerator()) {
-        $Domain = $Entry.Key
-        $DomainRoot = Join-Path $DocsRoot $Domain
-        $IndexPath = Join-Path $DomainRoot $Entry.Value
-        if (-not (Test-Path -LiteralPath $IndexPath -PathType Leaf)) {
-            Add-Issue "Knowledge domain is missing content map: docs/$Domain/$($Entry.Value)"
-            continue
-        }
-
-        $MappedPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        foreach ($Target in @(Get-InternalMarkdownTargets $IndexPath)) {
-            $MappedPaths.Add($Target) | Out-Null
-        }
-        foreach ($File in @(Get-ChildItem -LiteralPath $DomainRoot -File -Filter "*.md")) {
-            if ($File.Name -eq $Entry.Value) {
-                continue
-            }
-            if (-not $MappedPaths.Contains($File.FullName)) {
+        $Mapped = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        foreach ($Target in @(Get-InternalMarkdownTargets $MapPath)) { $Mapped.Add($Target) | Out-Null }
+        foreach ($File in @(Get-ChildItem -LiteralPath $DomainRoot -File -Filter '*.md')) {
+            if ($File.Name -eq $Entry.Value) { continue }
+            if (-not $Mapped.Contains($File.FullName)) {
                 Add-Issue "Knowledge document is not listed by its domain map: $($File.FullName.Substring($Root.Length + 1))"
             }
         }
     }
 }
 
-try {
-    $Root = (Resolve-Path -LiteralPath $ProjectRoot).Path
+function Test-KnowledgeRecords {
+    if (-not (Test-Path -LiteralPath $Vault -PathType Container)) { return }
+    $ExcludedPattern = '[\\/](14-开发方案|90-模板|99-归档|_attachments)[\\/]'
+    $Documents = @(Get-ChildItem -LiteralPath $Vault -Recurse -File -Filter '*.md' | Where-Object {
+        $_.FullName -notmatch $ExcludedPattern
+    })
+    $SeenIds = @{}
+    $KnownPaths = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $Degrees = @{}
+    foreach ($Document in $Documents) {
+        $KnownPaths.Add($Document.FullName) | Out-Null
+        $Degrees[$Document.FullName] = 0
+    }
+    foreach ($Document in $Documents) {
+        $Content = Get-Content -LiteralPath $Document.FullName -Raw -Encoding UTF8
+        foreach ($Field in @('id', 'type', 'status', 'summary')) {
+            if ([string]::IsNullOrWhiteSpace((Get-FrontmatterValue $Content $Field))) {
+                Add-Issue "$($Document.FullName.Substring($Root.Length + 1)) missing required frontmatter '$Field'"
+            }
+        }
+        $Id = Get-FrontmatterValue $Content 'id'
+        if (-not [string]::IsNullOrWhiteSpace($Id)) {
+            if ($SeenIds.ContainsKey($Id)) { Add-Issue "Duplicate knowledge id: $Id" }
+            $SeenIds[$Id] = $Document.FullName
+        }
+        $Summary = Get-FrontmatterValue $Content 'summary'
+        if ($Summary -match '(当前事实、边界与关联依据|Knowledge note:)') {
+            Add-Issue "Low-information summary in $($Document.FullName.Substring($Root.Length + 1))"
+        }
+        foreach ($Target in @(Get-InternalMarkdownTargets $Document.FullName)) {
+            if ($KnownPaths.Contains($Target)) {
+                $Degrees[$Document.FullName]++
+                $Degrees[$Target]++
+            }
+        }
+    }
+    foreach ($Document in $Documents) {
+        $Content = Get-Content -LiteralPath $Document.FullName -Raw -Encoding UTF8
+        $Status = Get-FrontmatterValue $Content 'status'
+        if ($Status -eq 'current' -and [int]$Degrees[$Document.FullName] -eq 0) {
+            Add-Issue "Current knowledge document is isolated: $($Document.FullName.Substring($Root.Length + 1))"
+        }
+    }
 }
-catch {
-    Write-Host "Agent project check failed: project root not found: $ProjectRoot" -ForegroundColor Red
-    exit 1
+
+function Test-TaskCapsules {
+    $PlanRoot = Join-Path $Vault '14-开发方案'
+    if (-not (Test-Path -LiteralPath $PlanRoot -PathType Container)) { return }
+    foreach ($File in @(Get-ChildItem -LiteralPath $PlanRoot -File -Filter '*.md' | Where-Object { $_.Name -match '^\d{4}-' })) {
+        $Content = Get-Content -LiteralPath $File.FullName -Raw -Encoding UTF8
+        foreach ($Field in @('type', 'status', 'task_id', 'change_level')) {
+            if ([string]::IsNullOrWhiteSpace((Get-FrontmatterValue $Content $Field))) {
+                Add-Issue "Task capsule $($File.Name) missing frontmatter '$Field'"
+            }
+        }
+        if ((Get-FrontmatterValue $Content 'type') -ne 'task-capsule') {
+            Add-Issue "Task capsule $($File.Name) must use type task-capsule"
+        }
+        $Status = Get-FrontmatterValue $Content 'status'
+        if (@('draft', 'confirmed', 'active', 'done', 'superseded') -notcontains $Status) {
+            Add-Issue "Task capsule $($File.Name) has invalid status '$Status'"
+        }
+        if ($Status -in @('confirmed', 'active') -and $Content -notmatch '(有序任务清单|任务清单)') {
+            Add-Issue "Executable task capsule $($File.Name) has no ordered task list"
+        }
+    }
 }
 
 $RequiredDirectories = @(
-    "docs/product",
-    "docs/architecture",
-    "docs/domain",
-    "docs/modules",
-    "docs/business",
-    "docs/contracts",
-    "docs/decisions",
-    "docs/plans",
-    "docs/quality"
-    "docs/project-memory"
+    'knowledge/00-入口', 'knowledge/01-项目定义', 'knowledge/02-业务模型',
+    'knowledge/03-系统架构', 'knowledge/04-接口与事件', 'knowledge/05-数据模型',
+    'knowledge/06-前端设计', 'knowledge/07-后端设计', 'knowledge/08-安全与合规',
+    'knowledge/09-技术调研', 'knowledge/10-架构决策', 'knowledge/11-测试与验收',
+    'knowledge/12-运行手册', 'knowledge/13-已知问题', 'knowledge/14-开发方案',
+    'knowledge/15-发布记录', 'knowledge/20-Agent运行时', 'knowledge/21-实时语音',
+    'knowledge/22-工作机执行端', 'knowledge/23-任务与提醒', 'knowledge/24-产品记忆与上下文',
+    'knowledge/90-模板', 'knowledge/99-归档'
 )
-$RequiredFiles = @(
-    "AGENTS.md",
-    "README.md",
-    ".agent-context/config.json",
-    ".gitignore",
-    ".gitattributes",
-    "docs/00-index.md",
-    "docs/domain/00-glossary.md",
-    "docs/domain/01-core-domain-model.md",
-    "docs/product/05-build-sequence.md",
-    "docs/architecture/09-repository-and-deployable-apps.md",
-    "docs/architecture/10-three-end-risk-review.md",
-    "docs/modules/mobile-web.md",
-    "docs/modules/identity-access.md",
-    "docs/modules/conversation-runtime.md",
-    "docs/modules/agent-orchestration.md",
-    "docs/modules/task-orchestration.md",
-    "docs/modules/memory-service.md",
-    "docs/modules/workstation-gateway.md",
-    "docs/modules/reminder-notification.md",
-    "docs/business/04-identity-and-device-flow.md",
-    "docs/contracts/02-cloud-public-api.md",
-    "docs/contracts/03-workstation-channel.md",
-    "docs/decisions/0004-three-app-monorepo.md",
-    "docs/plans/0002-v2-design-readiness.md",
-    "docs/plans/0003-three-app-architecture-review.md",
-    "docs/quality/02-phase-1-design-acceptance.md"
-    "docs/project-memory/00-project-memory-map.md"
-)
-
 foreach ($Directory in $RequiredDirectories) { Test-RequiredDirectory $Directory }
-foreach ($File in $RequiredFiles) { Test-RequiredFile $File }
+foreach ($File in @(
+    'AGENTS.md', 'README.md', '.agent-context/config.json', '.gitignore', '.gitattributes',
+    'knowledge/00-入口/00-知识库总地图.md', 'knowledge/00-入口/知识库首页.md',
+    'knowledge/00-入口/开发者入口.md', 'knowledge/00-入口/知识库维护规范.md',
+    'knowledge/14-开发方案/00-开发方案地图.md', 'knowledge/90-模板/任务舱模板.md'
+)) { Test-RequiredFile $File }
 
-Test-ContainsText "AGENTS.md" ".agent-context/config.json"
-Test-ContainsText "AGENTS.md" "Agent Context OS"
-Test-ContainsText "AGENTS.md" "local-index"
-Test-ContainsText ".gitignore" ".agent-context/local-index/"
-Test-ContainsText ".gitignore" ".agent-context/cache/"
-Test-ContainsText ".gitattributes" "*.ps1 text eol=crlf"
-Test-ContainsText "docs/00-index.md" "docs/architecture"
-
-if (Test-Path -LiteralPath (Join-Path $Root "docs/agent")) {
-    Add-Issue "Legacy docs/agent must not exist in the V2 thin-launcher project"
-}
-if (Test-Path -LiteralPath (Join-Path $Root ".agent-context/memory-sources")) {
-    Add-Issue "Legacy .agent-context/memory-sources must not exist after the schema 3 migration"
+if (Test-Path -LiteralPath (Join-Path $Root '.agent-context/memory-sources')) {
+    Add-Issue 'Legacy .agent-context/memory-sources must not exist'
 }
 
-$ConfigPath = Join-Path $Root ".agent-context/config.json"
-$Config = $null
+$ConfigPath = Join-Path $Root '.agent-context/config.json'
 if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
-    try {
-        $Config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    }
-    catch {
-        Add-Issue ".agent-context/config.json is not valid JSON: $($_.Exception.Message)"
-    }
-}
-
-if ($Config) {
-    foreach ($Field in @("schema_version", "project_id", "project_name", "agent", "memory", "quality")) {
-        if (-not ($Config.PSObject.Properties.Name -contains $Field)) {
-            Add-Issue ".agent-context/config.json missing field '$Field'"
+    try { $Config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json }
+    catch { Add-Issue ".agent-context/config.json is invalid JSON: $($_.Exception.Message)"; $Config = $null }
+    if ($Config) {
+        if ($Config.schema_version -ne 3) { Add-Issue 'schema_version must be 3' }
+        if ($Config.agent.mode -ne 'thin-launcher') { Add-Issue "agent.mode must be thin-launcher" }
+        $Sources = @($Config.memory.sources)
+        if ($Sources.Count -ne 1) { Add-Issue 'ArcMind must configure exactly one knowledge source' }
+        elseif ($Sources[0].provider -ne 'obsidian' -or $Sources[0].path -ne 'knowledge') {
+            Add-Issue 'ArcMind knowledge source must be the knowledge Obsidian vault'
         }
-    }
-    Test-NonPlaceholder ([string]$Config.project_id) "project_id"
-    Test-NonPlaceholder ([string]$Config.project_name) "project_name"
-
-    if ($Config.schema_version -ne 3) {
-        Add-Issue "schema_version must be 3"
-    }
-    if ($Config.PSObject.Properties.Name -contains "engine") {
-        Add-Issue "schema 3 must use 'agent', not legacy 'engine'"
-    }
-    if ($Config.agent.mode -ne "thin-launcher") {
-        Add-Issue "agent.mode must be 'thin-launcher'"
-    }
-    foreach ($Field in @("name", "mode", "version", "source")) {
-        Test-NonPlaceholder ([string]$Config.agent.$Field) "agent.$Field"
-    }
-
-    if ($Config.memory.local_index.git_tracked -ne $false) {
-        Add-Issue "memory.local_index.git_tracked must be false"
-    }
-    foreach ($Field in @("provider", "path")) {
-        Test-NonPlaceholder ([string]$Config.memory.local_index.$Field) "memory.local_index.$Field"
-    }
-    if ($Config.memory.local_index.provider -ne "embedded-json") {
-        Add-Issue "memory.local_index.provider must be 'embedded-json'"
-    }
-    if ($Config.quality.validation_commands.Count -eq 0) {
-        Add-Issue "quality.validation_commands must not be empty"
-    }
-    if ($Config.memory.PSObject.Properties.Name -contains "source_paths") {
-        Add-Issue "schema 3 must not contain legacy memory.source_paths"
-    }
-    $Sources = @($Config.memory.sources)
-    if ($Sources.Count -ne 1) {
-        Add-Issue "ArcMind schema 3 must configure exactly one Obsidian knowledge source"
-    }
-    foreach ($Source in $Sources) {
-        foreach ($Field in @("id", "provider", "path")) {
-            Test-NonPlaceholder ([string]$Source.$Field) "memory.sources.$Field"
+        $RequiredExcludes = @('14-开发方案', '90-模板', '99-归档', '_attachments')
+        foreach ($Excluded in $RequiredExcludes) {
+            if (@($Sources[0].exclude_directories) -notcontains $Excluded) {
+                Add-Issue "Knowledge source must exclude $Excluded"
+            }
         }
-        if ($Source.provider -ne "obsidian") {
-            Add-Issue "ArcMind knowledge source must use the Obsidian provider"
-        }
-        if ($Source.path -ne "docs") {
-            Add-Issue "ArcMind Obsidian knowledge source must be 'docs'"
+        if ($Config.memory.local_index.provider -ne 'embedded-json' -or $Config.memory.local_index.git_tracked -ne $false) {
+            Add-Issue 'Local index must use untracked embedded-json'
         }
     }
 }
 
 Test-MarkdownLinks
-Test-KnowledgeGraph
+Test-KnowledgeLayout
+Test-KnowledgeRecords
+Test-TaskCapsules
 
 if ($Issues.Count -gt 0) {
-    Write-Host "Agent project check failed:" -ForegroundColor Red
-    foreach ($Issue in $Issues) {
-        Write-Host (" - " + $Issue) -ForegroundColor Red
-    }
+    Write-Host 'Agent project check failed:' -ForegroundColor Red
+    foreach ($Issue in $Issues) { Write-Host (' - ' + $Issue) -ForegroundColor Red }
     exit 1
 }
 
-Write-Host "Agent project check passed." -ForegroundColor Green
+Write-Host 'Agent project check passed.' -ForegroundColor Green
 exit 0

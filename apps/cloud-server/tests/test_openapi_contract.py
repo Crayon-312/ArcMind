@@ -19,7 +19,7 @@ def test_reviewed_operations_match_fastapi(monkeypatch: MonkeyPatch) -> None:
         dict[str, Any],
         yaml.safe_load(
             open(  # noqa: PTH123, SIM115
-                "../../docs/contracts/openapi/phase-1.yaml",
+                "../../knowledge/04-接口与事件/openapi/phase-1.yaml",
                 encoding="utf-8",
             )
         ),

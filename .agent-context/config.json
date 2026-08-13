@@ -13,7 +13,7 @@
       {
         "id": "arcmind-knowledge-vault",
         "provider": "obsidian",
-        "path": "docs",
+        "path": "knowledge",
         "required_frontmatter": [
           "id",
           "type",
@@ -21,9 +21,10 @@
           "summary"
         ],
         "exclude_directories": [
-          "plans",
-          "templates",
-          "assets"
+          "14-开发方案",
+          "90-模板",
+          "99-归档",
+          "_attachments"
         ]
       }
     ],

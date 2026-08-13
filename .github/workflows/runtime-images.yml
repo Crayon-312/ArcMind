@@ -7,7 +7,7 @@ on:
       - ".dockerignore"
       - ".github/workflows/runtime-images.yml"
       - "apps/**"
-      - "docs/contracts/**"
+      - "knowledge/04-接口与事件/**"
       - "infrastructure/cloud/**"
       - "packages/**"
       - "package.json"

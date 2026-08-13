@@ -8,7 +8,7 @@ COPY apps/mobile-web/package.json apps/mobile-web/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 RUN pnpm install --frozen-lockfile --filter @arcmind/mobile-web...
 
-COPY docs/contracts/openapi/phase-1.yaml docs/contracts/openapi/phase-1.yaml
+COPY knowledge/04-接口与事件/openapi/phase-1.yaml knowledge/04-接口与事件/openapi/phase-1.yaml
 COPY packages/contracts packages/contracts
 COPY apps/mobile-web apps/mobile-web
 RUN pnpm contracts:generate && pnpm --filter @arcmind/mobile-web build

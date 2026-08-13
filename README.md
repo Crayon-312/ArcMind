@@ -2,7 +2,7 @@
 
 ArcMind V2 是一个以实时语音为主要入口、以云端任务中枢为核心、以个人工作机为可选执行扩展的个人 AI 助理项目。
 
-当前分支处于文档先行阶段，只定义产品目标、业务规则、架构边界和开发协作门禁，暂不包含业务实现代码。
+当前 `v2` 分支已经具备身份与文字对话运行切片；后续开发仍以知识契约、任务舱和真实行为验证作为协作基线。
 
 ## 产品组成
 
@@ -20,14 +20,14 @@ ArcMind V2 是一个以实时语音为主要入口、以云端任务中枢为核
 ## 文档入口
 
 - 开发协作入口：[AGENTS.md](AGENTS.md)
-- Obsidian 知识库首页：[docs/README.md](docs/README.md)
-- 项目文档索引：[docs/00-index.md](docs/00-index.md)
+- Obsidian 知识库首页：[knowledge/00-入口/知识库首页.md](knowledge/00-入口/知识库首页.md)
+- 项目知识总地图：[knowledge/00-入口/00-知识库总地图.md](knowledge/00-入口/00-知识库总地图.md)
 - 项目上下文配置：[.agent-context/config.json](.agent-context/config.json)
-- 可检索项目记忆：[docs/project-memory/00-project-memory-map.md](docs/project-memory/00-project-memory-map.md)
+- 开发方案与任务舱：[knowledge/14-开发方案/00-开发方案地图.md](knowledge/14-开发方案/00-开发方案地图.md)
 
 Agent 使用 `pnpm context:validate`、`pnpm context:index` 和 `pnpm context:search -- "<查询>"` 校验、建立本地索引和检索同一套 Obsidian 项目知识。本地索引不进入 Git。
 
-本机使用 Obsidian 时直接将 `D:\ArcMind\docs` 作为 Vault（知识库目录）打开。仓库只保存 Markdown、附件和少量共享配置，不包含 Obsidian 应用本体、个人窗口状态、社区插件或主题文件。
+本机使用 Obsidian 时直接将 `D:\ArcMind\knowledge` 作为 Vault（知识库目录）打开。仓库只保存 Markdown、附件和少量共享配置，不包含 Obsidian 应用本体、个人窗口状态、社区插件或主题文件。
 
 ## 分支策略
 
