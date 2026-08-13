@@ -1,0 +1,341 @@
+diff --git a/agent/src/cli.js b/agent/src/cli.js
+index f14a9fa40a885b75b9fc4e1ac4c62d82542669b1..41d868bbae409370fed41568619bc7f94606c5cb 100644
+--- a/agent/src/cli.js
++++ b/agent/src/cli.js
+@@ -59,7 +59,7 @@ export async function runCli(argv, io = defaultIo()) {
+       io.stdout("No matching context found.\n");
+     } else {
+       for (const result of results) {
+-        io.stdout(`[${result.score}] ${result.title}\n  ${result.evidence}\n  ${result.summary}\n`);
++        io.stdout(`[${result.score}][${result.status}] ${result.title}\n  ${result.evidence}\n  ${result.summary}\n`);
+       }
+     }
+     return 0;
+diff --git a/agent/src/index-store.js b/agent/src/index-store.js
+index 8781ded2af654fe9a92f35ddcdb83fa7132f4fcd..45eb0eafefbae4411dc47a8d1af925bf6806d68f 100644
+--- a/agent/src/index-store.js
++++ b/agent/src/index-store.js
+@@ -1,6 +1,6 @@
+ import { execFile } from "node:child_process";
+ import { createHash } from "node:crypto";
+-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
++import { mkdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+ import path from "node:path";
+ import { promisify } from "node:util";
+ import { getMemorySources, resolveProjectPath } from "./config.js";
+@@ -143,9 +143,10 @@ function createSourceHash(documents, sources) {
+ 
+ async function assertIndexPathProtected(indexPath, projectRoot) {
+   const repositoryRoot = await getRepositoryRoot(projectRoot);
+-  if (!repositoryRoot || !isWithin(repositoryRoot, indexPath)) return;
++  const canonicalIndexPath = await canonicalizePath(indexPath);
++  if (!repositoryRoot || !isWithin(repositoryRoot, canonicalIndexPath)) return;
+ 
+-  const relativePath = path.relative(repositoryRoot, indexPath).split(path.sep).join("/");
++  const relativePath = path.relative(repositoryRoot, canonicalIndexPath).split(path.sep).join("/");
+   if (await gitSucceeds(repositoryRoot, ["ls-files", "--error-unmatch", "--", relativePath])) {
+     throw new Error(`local index path is tracked by Git: ${indexPath}`);
+   }
+@@ -154,6 +155,18 @@ async function assertIndexPathProtected(indexPath, projectRoot) {
+   }
+ }
+ 
++async function canonicalizePath(targetPath) {
++  const absolutePath = path.resolve(targetPath);
++  try {
++    return await realpath(absolutePath);
++  } catch (error) {
++    if (error.code !== "ENOENT") throw error;
++    const parentPath = path.dirname(absolutePath);
++    if (parentPath === absolutePath) return absolutePath;
++    return path.join(await canonicalizePath(parentPath), path.basename(absolutePath));
++  }
++}
++
+ async function getRepositoryRoot(projectRoot) {
+   try {
+     const { stdout } = await execFileAsync("git", ["-C", projectRoot, "rev-parse", "--show-toplevel"], { encoding: "utf8" });
+diff --git a/agent/src/providers/obsidian.js b/agent/src/providers/obsidian.js
+index c5b89ee4c19fc1d112690858069d9983626bdc47..b92eff1ae4b2b91e2c8e42e795f50a0128dd4efb 100644
+--- a/agent/src/providers/obsidian.js
++++ b/agent/src/providers/obsidian.js
+@@ -54,7 +54,10 @@ async function collectMarkdownFiles(root, current, excluded) {
+ function toDocument(source, relativePath, markdown, attributes, body) {
+   const title = stringValue(attributes.title) || firstHeading(body) || path.basename(relativePath, path.extname(relativePath));
+   const tags = unique([...arrayValue(attributes.tags), ...extractInlineTags(body)]);
+-  const links = unique(extractWikiLinks(body));
++  const links = unique([
++    ...extractWikiLinks(body),
++    ...extractMarkdownLinks(body, relativePath)
++  ]);
+   const summary = stringValue(attributes.summary);
+   const id = stringValue(attributes.id);
+ 
+@@ -93,6 +96,24 @@ function extractWikiLinks(body) {
+     .map((match) => match[1].trim());
+ }
+ 
++function extractMarkdownLinks(body, relativePath) {
++  const sourceDirectory = path.posix.dirname(relativePath);
++  return [...body.matchAll(/(?<!!)\[[^\]]*\]\(([^)]+)\)/g)]
++    .map((match) => match[1].trim())
++    .filter((target) => target && !/^(?:[a-z][a-z0-9+.-]*:|#)/i.test(target))
++    .map((target) => target.split("#", 1)[0].split("?", 1)[0])
++    .filter(Boolean)
++    .map((target) => {
++      try {
++        return decodeURIComponent(target);
++      } catch {
++        return target;
++      }
++    })
++    .map((target) => path.posix.normalize(path.posix.join(sourceDirectory, target.replaceAll("\\", "/"))))
++    .filter((target) => target !== ".." && !target.startsWith("../"));
++}
++
+ function extractInlineTags(body) {
+   return [...body.matchAll(/(^|\s)#([\p{L}\p{N}_/-]+)/gu)].map((match) => match[2]);
+ }
+diff --git a/agent/src/search.js b/agent/src/search.js
+index da800faa5671d3ecec61329b2e016b27452dfb9e..3be1b15591e8e2cebc7fde6df54719055c7a1f72 100644
+--- a/agent/src/search.js
++++ b/agent/src/search.js
+@@ -4,10 +4,19 @@ export function searchIndex(index, query, options = {}) {
+   const terms = tokenize(normalizedQuery);
+   const limit = Number.isInteger(options.limit) && options.limit > 0 ? options.limit : 10;
+ 
+-  return index.documents
++  const candidates = index.documents
+     .filter((document) => !options.type || document.type === options.type)
+-    .filter((document) => !options.status || document.status === options.status)
+-    .map((document) => ({ document, score: scoreDocument(document, normalizedQuery, terms) }))
++    .filter((document) => !options.status || document.status === options.status);
++  const directScores = new Map(candidates.map((document) => [document.path, scoreDocument(document, normalizedQuery, terms)]));
++  const relationshipScores = scoreRelationships(candidates, directScores);
++
++  return candidates
++    .map((document) => {
++      const directScore = directScores.get(document.path) ?? 0;
++      const relationshipScore = relationshipScores.get(document.path) ?? 0;
++      const statusScore = options.status || directScore + relationshipScore === 0 ? 0 : scoreStatus(document.status);
++      return { document, score: directScore + relationshipScore + statusScore };
++    })
+     .filter((result) => result.score > 0)
+     .sort((left, right) => right.score - left.score || left.document.id.localeCompare(right.document.id))
+     .slice(0, limit)
+@@ -25,6 +34,32 @@ export function searchIndex(index, query, options = {}) {
+     }));
+ }
+ 
++function scoreRelationships(documents, directScores) {
++  const paths = new Set(documents.map((document) => document.path));
++  const scores = new Map();
++  for (const document of documents) {
++    const sourceScore = directScores.get(document.path) ?? 0;
++    for (const target of document.links ?? []) {
++      if (!paths.has(target)) continue;
++      const targetScore = directScores.get(target) ?? 0;
++      if (sourceScore > 0) addRelationshipScore(scores, target, sourceScore);
++      if (targetScore > 0) addRelationshipScore(scores, document.path, targetScore);
++    }
++  }
++  return scores;
++}
++
++function addRelationshipScore(scores, path, directScore) {
++  const bonus = Math.min(3, Math.max(1, Math.ceil(directScore / 8)));
++  scores.set(path, Math.max(scores.get(path) ?? 0, bonus));
++}
++
++function scoreStatus(status) {
++  if (status === "current") return 3;
++  if (status === "deprecated" || status === "stale") return -2;
++  return 0;
++}
++
+ function scoreDocument(document, query, terms) {
+   const title = normalize(document.title);
+   const summary = normalize(document.summary);
+diff --git a/scripts/check-agent-context-os.ps1 b/scripts/check-agent-context-os.ps1
+index b71afde432a825f4314280f55de2ce7c5c4f0322..e5d2489f9168a85475e36f985a7c4c378c970595 100644
+--- a/scripts/check-agent-context-os.ps1
++++ b/scripts/check-agent-context-os.ps1
+@@ -80,7 +80,6 @@ $RequiredFiles = @(
+     "README.md",
+     "AGENTS.md",
+     "LICENSE",
+-    ".gitignore",
+     ".gitattributes",
+     "docs/00-system-overview.md",
+     "docs/01-context-routing.md",
+@@ -112,7 +111,6 @@ $RequiredFiles = @(
+     "agent/src/providers/obsidian.js",
+     "agent/src/providers/jsonl.js",
+     "package.json",
+-    "templates/project/.gitignore",
+     "templates/project/.gitattributes",
+     "templates/project/AGENTS.md",
+     "templates/project/.agent-context/config.json",
+@@ -138,6 +136,10 @@ $RequiredFiles = @(
+     "scripts/check-agent-strong.ps1"
+ )
+ 
++if (Test-Path -LiteralPath (Join-Path $Root ".git") -PathType Container) {
++    $RequiredFiles += @(".gitignore", "templates/project/.gitignore")
++}
++
+ foreach ($Directory in $RequiredDirectories) {
+     Test-RequiredDirectory $Directory
+ }
+@@ -171,8 +173,10 @@ Test-ContainsText "agent/src/index-store.js" "buildIndex"
+ Test-ContainsText "agent/src/search.js" "searchIndex"
+ Test-ContainsText "package.json" "node --test"
+ Test-ContainsText "templates/project/.gitattributes" "*.ps1 text eol=crlf"
+-Test-ContainsText "templates/project/.gitignore" ".agent-context/local-index/"
+-Test-ContainsText "templates/project/.gitignore" ".agent-context/cache/"
++if (Test-Path -LiteralPath (Join-Path $Root "templates/project/.gitignore") -PathType Leaf) {
++    Test-ContainsText "templates/project/.gitignore" ".agent-context/local-index/"
++    Test-ContainsText "templates/project/.gitignore" ".agent-context/cache/"
++}
+ Test-ContainsText "templates/project/AGENTS.md" ".agent-context/config.json"
+ Test-ContainsText "templates/project/AGENTS.md" "local-index"
+ Test-ContainsText "templates/project/.agent-context/config.json" "thin-launcher"
+@@ -199,8 +203,10 @@ Test-ContainsText "scripts/check-agent-strong.ps1" "check-agent-project.ps1"
+ Test-ContainsText "scripts/check-agent-strong.ps1" "Invoke-ExpectedFailureScript"
+ Test-ContainsText "scripts/check-agent-strong.ps1" "diff"
+ 
+-$ProjectTemplateCheckArgs = @("-ProjectRoot", "templates/project", "-AllowPlaceholders")
+-Invoke-CheckScript "scripts/check-agent-project.ps1" $ProjectTemplateCheckArgs
++if (Test-Path -LiteralPath (Join-Path $Root "templates/project/.gitignore") -PathType Leaf) {
++    $ProjectTemplateCheckArgs = @("-ProjectRoot", "templates/project", "-AllowPlaceholders")
++    Invoke-CheckScript "scripts/check-agent-project.ps1" $ProjectTemplateCheckArgs
++}
+ Invoke-CheckScript "scripts/check-agent-worktrees.ps1"
+ 
+ if ($Issues.Count -gt 0) {
+diff --git a/scripts/check-agent-strong.ps1 b/scripts/check-agent-strong.ps1
+index caa6313ac98a80f38528624407695afb019ee718..3bc8f4aa22e68c2d59356a5043d8863b024f588b 100644
+--- a/scripts/check-agent-strong.ps1
++++ b/scripts/check-agent-strong.ps1
+@@ -113,6 +113,14 @@ function New-ProjectFixture {
+ 
+     $FixtureRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("agent-context-os-check-" + [guid]::NewGuid().ToString("N"))
+     Copy-Item -LiteralPath (Join-Path $Root "templates/project") -Destination $FixtureRoot -Recurse
++    Set-Content -LiteralPath (Join-Path $FixtureRoot ".gitignore") -Encoding UTF8 -Value @(
++        ".agent-context/local-index/",
++        ".agent-context/index/",
++        ".agent-context/cache/",
++        ".agent-context/*.db",
++        ".agent-context/*.sqlite",
++        ".agent-context/*.sqlite3"
++    )
+ 
+     $ConfigPath = Join-Path $FixtureRoot ".agent-context/config.json"
+     $Config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+@@ -147,10 +155,14 @@ try {
+     Invoke-GitCheck "Staged whitespace check" @("diff", "--cached", "--check", "--")
+ 
+     Invoke-CheckScript "scripts/check-agent-context-os.ps1"
+-    Invoke-CheckScript "scripts/check-agent-project.ps1" @("-ProjectRoot", "templates/project", "-AllowPlaceholders")
++    if (Test-Path -LiteralPath (Join-Path $Root "templates/project/.gitignore") -PathType Leaf) {
++        Invoke-CheckScript "scripts/check-agent-project.ps1" @("-ProjectRoot", "templates/project", "-AllowPlaceholders")
++    }
+     Invoke-CheckScript "scripts/check-agent-worktrees.ps1"
+     Invoke-CheckScript "scripts/check-agent-drift.ps1"
+-    Invoke-ExpectedFailureScript "scripts/check-agent-project.ps1" @("-ProjectRoot", "templates/project") "placeholder"
++    if (Test-Path -LiteralPath (Join-Path $Root "templates/project/.gitignore") -PathType Leaf) {
++        Invoke-ExpectedFailureScript "scripts/check-agent-project.ps1" @("-ProjectRoot", "templates/project") "placeholder"
++    }
+ 
+     $NodeOutput = & node --test 2>&1
+     if ($LASTEXITCODE -ne 0) {
+diff --git a/test/agent-integration.test.js b/test/agent-integration.test.js
+index 516971b1ef1b9ff31d5b9169bba5ff2bfd8789fc..0827161235e752e9b4f9c65bd1c6075ef7d07c0e 100644
+--- a/test/agent-integration.test.js
++++ b/test/agent-integration.test.js
+@@ -53,6 +53,33 @@ tags: [订单, 库存]
+   assert.equal(results[0].evidence, "project-vault:checkout.md");
+ });
+ 
++test("prefers current knowledge by default and expands direct Markdown relationships", () => {
++  const index = {
++    documents: [
++      {
++        id: "current-rule", source_id: "vault", path: "rules/current.md", title: "发布规则",
++        summary: "当前发布规则要求先验证。", type: "project_fact", status: "current",
++        tags: [], scope: [], links: ["quality/check.md"], content: "发布前必须验证。"
++      },
++      {
++        id: "draft-rule", source_id: "vault", path: "rules/draft.md", title: "发布规则草稿",
++        summary: "发布规则仍在讨论。", type: "project_fact", status: "draft",
++        tags: [], scope: [], links: [], content: "发布前必须验证。"
++      },
++      {
++        id: "quality-check", source_id: "vault", path: "quality/check.md", title: "质量门禁",
++        summary: "自动检查提供发布证据。", type: "project_fact", status: "current",
++        tags: [], scope: [], links: [], content: "检查脚本。"
++      }
++    ]
++  };
++
++  const defaultResults = searchIndex(index, "发布前必须验证");
++  assert.equal(defaultResults[0].id, "current-rule");
++  assert.ok(defaultResults.some((result) => result.id === "quality-check"));
++  assert.equal(searchIndex(index, "发布前必须验证", { status: "draft" })[0].id, "draft-rule");
++});
++
+ test("rejects duplicate knowledge ids across sources", async (context) => {
+   const projectRoot = await mkdtemp(path.join(os.tmpdir(), "agent-context-duplicate-"));
+   context.after(() => rm(projectRoot, { recursive: true, force: true }));
+diff --git a/test/obsidian-provider.test.js b/test/obsidian-provider.test.js
+index 3bea4263181a85b8dc9cbb3ba8758274896ec78b..15d344ae7766cf53319eb57c2f8c77de01676711 100644
+--- a/test/obsidian-provider.test.js
++++ b/test/obsidian-provider.test.js
+@@ -23,7 +23,7 @@ last_verified: 2026-08-12
+ ---
+ # Agent Boundary
+ 
+-The Agent reads [[Project Knowledge]] and returns evidence. #runtime
++The Agent reads [[Project Knowledge]], [the API contract](../contracts/api.md) and returns evidence. #runtime
+ `, "utf8");
+ 
+   const result = await readObsidianSource({
+@@ -36,11 +36,37 @@ The Agent reads [[Project Knowledge]] and returns evidence. #runtime
+   assert.equal(result.issues.length, 0);
+   assert.equal(result.documents.length, 1);
+   assert.equal(result.documents[0].id, "arch-agent");
+-  assert.deepEqual(result.documents[0].links, ["Project Knowledge"]);
++  assert.deepEqual(result.documents[0].links, ["Project Knowledge", "contracts/api.md"]);
+   assert.deepEqual(result.documents[0].tags, ["architecture", "runtime"]);
+   assert.equal(result.documents[0].path, "architecture/agent.md");
+ });
+ 
++test("normalizes relative Markdown links and ignores images and external links", async (context) => {
++  const root = await mkdtemp(path.join(os.tmpdir(), "agent-context-obsidian-markdown-links-"));
++  context.after(() => rm(root, { recursive: true, force: true }));
++  await mkdir(path.join(root, "domain"));
++  await writeFile(path.join(root, "domain", "note.md"), `---
++id: markdown-links
++type: architecture_rule
++status: current
++summary: Standard Markdown links belong in the index.
++---
++# Markdown links
++
++[Current API](../contracts/current%20api.md#errors)
++![Diagram](../assets/diagram.png)
++[External](https://example.com/docs)
++`, "utf8");
++
++  const result = await readObsidianSource({
++    id: "project-vault",
++    provider: "obsidian",
++    path: root
++  }, root);
++
++  assert.deepEqual(result.documents[0].links, ["contracts/current api.md"]);
++});
++
+ test("reports notes missing required frontmatter without indexing them", async (context) => {
+   const root = await mkdtemp(path.join(os.tmpdir(), "agent-context-obsidian-invalid-"));
+   context.after(() => rm(root, { recursive: true, force: true }));

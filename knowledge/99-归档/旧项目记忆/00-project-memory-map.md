@@ -16,7 +16,7 @@ last_verified: "2026-08-13"
 ## 知识记录
 
 - [Agent Context OS schema 3 升级实现事实](../../15-发布记录/implementation-agent-context-os-v3-upgrade.md)：记录固定版本、唯一知识源和可执行检索验收。
-- [历史响应时间倒序导致迁移配对失败](../../13-已知问题/01-历史响应时间倒序迁移问题.md)：记录旧 ORM 时间赋值顺序和稳定迁移配对规则。
+- [历史响应时间倒序迁移规则](../../05-数据模型/01-数据存储事务与检索.md)：旧问题已确认根因并迁入当前数据迁移规则。
 - [mem-20260730-001](./mem-20260730-001.md)：ArcMind V2 is a voice-first personal AI assistant that can remember, track tasks and optionally coordinate a personal workstation.
 - [mem-20260730-002](../../21-实时语音/01-前台语音与用户打断规则.md)：The first mobile client is a foreground Web experience and realtime speech must support user interruption.
 - [mem-20260730-003](./mem-20260730-003.md)：The product is not limited to companionship or programming and does not rebuild a dedicated coding model.

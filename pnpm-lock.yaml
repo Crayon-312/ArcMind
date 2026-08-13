@@ -4,13 +4,18 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  agent-context-os@0.2.0:
+    hash: 86862bd80086f4e12dacd4e18d8c25de5fe6d8180642cb8adf137ec0f7e18ba8
+    path: patches/agent-context-os@0.2.0.patch
+
 importers:
 
   .:
     devDependencies:
       agent-context-os:
         specifier: github:Crayon-312/agent-context-os#fd84369ae9fd1d88df222d18a8519fba87592f4e
-        version: https://codeload.github.com/Crayon-312/agent-context-os/tar.gz/fd84369ae9fd1d88df222d18a8519fba87592f4e
+        version: https://codeload.github.com/Crayon-312/agent-context-os/tar.gz/fd84369ae9fd1d88df222d18a8519fba87592f4e(patch_hash=86862bd80086f4e12dacd4e18d8c25de5fe6d8180642cb8adf137ec0f7e18ba8)
 
   apps/mobile-web:
     dependencies:
@@ -2067,7 +2072,7 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  agent-context-os@https://codeload.github.com/Crayon-312/agent-context-os/tar.gz/fd84369ae9fd1d88df222d18a8519fba87592f4e: {}
+  agent-context-os@https://codeload.github.com/Crayon-312/agent-context-os/tar.gz/fd84369ae9fd1d88df222d18a8519fba87592f4e(patch_hash=86862bd80086f4e12dacd4e18d8c25de5fe6d8180642cb8adf137ec0f7e18ba8): {}
 
   ajv@6.15.0:
     dependencies:

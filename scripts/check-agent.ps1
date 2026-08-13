@@ -177,6 +177,43 @@ function Test-KnowledgeRecords {
     }
 }
 
+function Test-KnowledgeStatusLinks {
+    if (-not (Test-Path -LiteralPath $Vault -PathType Container)) { return }
+    $ExcludedTopDirectories = @('14-开发方案', '90-模板', '99-归档', '_attachments')
+    $Documents = @(Get-ChildItem -LiteralPath $Vault -Recurse -File -Filter '*.md' | Where-Object {
+        $RelativePath = $_.FullName.Substring($Vault.Length + 1)
+        $TopDirectory = ($RelativePath -split '[\\/]')[0]
+        $ExcludedTopDirectories -notcontains $TopDirectory
+    })
+    $Metadata = @{}
+    foreach ($Document in $Documents) {
+        $Content = Get-Content -LiteralPath $Document.FullName -Raw -Encoding UTF8
+        $Metadata[$Document.FullName] = [pscustomobject]@{
+            Status = Get-FrontmatterValue $Content 'status'
+            Type = Get-FrontmatterValue $Content 'type'
+        }
+    }
+    foreach ($Document in $Documents) {
+        $Content = Get-Content -LiteralPath $Document.FullName -Raw -Encoding UTF8
+        if ($Metadata[$Document.FullName].Status -ne 'current') { continue }
+        foreach ($Match in [regex]::Matches($Content, '(?<!!)\[([^\]]+)\]\(([^)]+)\)')) {
+            $Label = $Match.Groups[1].Value.Trim()
+            $Target = $Match.Groups[2].Value.Trim()
+            if ($Target -match '^(https?://|#|mailto:)') { continue }
+            $PathPart = ($Target -split '#', 2)[0]
+            if ([string]::IsNullOrWhiteSpace($PathPart)) { continue }
+            $Decoded = [Uri]::UnescapeDataString($PathPart).Replace('/', '\')
+            $Resolved = [IO.Path]::GetFullPath((Join-Path $Document.DirectoryName $Decoded))
+            if (-not $Metadata.ContainsKey($Resolved)) { continue }
+            $TargetMetadata = $Metadata[$Resolved]
+            if ($TargetMetadata.Status -ne 'draft' -or $TargetMetadata.Type -eq 'open_question') { continue }
+            if ($Label -notmatch '(草案|待定|待确认|开放问题|未决|待验收|仍待)') {
+                Add-Issue "Current knowledge links to draft without a status label: $($Document.FullName.Substring($Root.Length + 1)) -> $Label"
+            }
+        }
+    }
+}
+
 function Test-TaskCapsules {
     $PlanRoot = Join-Path $Vault '14-开发方案'
     if (-not (Test-Path -LiteralPath $PlanRoot -PathType Container)) { return }
@@ -229,6 +266,9 @@ if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
     if ($Config) {
         if ($Config.schema_version -ne 3) { Add-Issue 'schema_version must be 3' }
         if ($Config.agent.mode -ne 'thin-launcher') { Add-Issue "agent.mode must be thin-launcher" }
+        if ($Config.agent.version -ne '0.2.0-fd84369+arcmind-retrieval.1') {
+            Add-Issue 'agent.version must identify the fixed upstream commit and ArcMind retrieval patch'
+        }
         $Sources = @($Config.memory.sources)
         if ($Sources.Count -ne 1) { Add-Issue 'ArcMind must configure exactly one knowledge source' }
         elseif ($Sources[0].provider -ne 'obsidian' -or $Sources[0].path -ne 'knowledge') {
@@ -249,6 +289,7 @@ if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
 Test-MarkdownLinks
 Test-KnowledgeLayout
 Test-KnowledgeRecords
+Test-KnowledgeStatusLinks
 Test-TaskCapsules
 
 if ($Issues.Count -gt 0) {

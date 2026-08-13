@@ -4,3 +4,6 @@ packages:
 
 onlyBuiltDependencies:
   - esbuild
+
+patchedDependencies:
+  agent-context-os@0.2.0: patches/agent-context-os@0.2.0.patch

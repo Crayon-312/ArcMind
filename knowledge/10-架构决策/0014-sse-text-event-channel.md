@@ -6,7 +6,7 @@ summary: "手机文字命令使用 HTTPS，云端更新使用支持快照、单�
 scope: ["decisions"]
 tags: ["arcmind-v2", "decisions"]
 confidence: "high"
-last_verified: "2026-08-06"
+last_verified: "2026-08-07"
 ---
 
 # 决策 0014：文字闭环使用 SSE 事件通道

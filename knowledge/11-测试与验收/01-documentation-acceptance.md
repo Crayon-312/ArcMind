@@ -18,6 +18,7 @@ last_verified: "2026-08-13"
 - 目录决策：[统一知识库目录与职责](../10-架构决策/0017-unified-knowledge-layout.md)
 - 关系决策：[知识关系分层模型](../10-架构决策/0011-knowledge-relationship-model.md)
 - 落实任务：[统一知识库结构完整迁移](../14-开发方案/0014-unified-knowledge-vault-migration.md)
+- 检索加固：[知识事实与检索质量加固](../14-开发方案/0015-knowledge-retrieval-quality-hardening.md)
 - 自动检查：`scripts/check-agent.ps1`
 
 ## 验收标准
@@ -39,6 +40,10 @@ last_verified: "2026-08-13"
 | KA-013 | OpenAPI 迁移不破坏类型生成、测试和容器构建 | `pnpm check` 与云端测试 |
 | KA-014 | Obsidian 默认关系图排除归档与模板噪声，并按知识域分组 | 检查 `.obsidian/graph.json` 与实际打开效果 |
 | KA-015 | 个人工作区、插件、主题和缓存不进入 Git | `.gitignore` 与 `git status` |
+| KA-016 | 标准 Markdown 内部关系进入索引，任务舱与归档保持排除 | 索引 `links` 统计与路径检查 |
+| KA-017 | 默认检索优先当前事实且结果显示状态，显式 `--status draft` 仍可检索草稿 | 固定查询与状态过滤 |
+| KA-018 | 当前知识引用非开放问题草稿时必须在链接文字中显示状态 | 项目跨状态关系门禁 |
+| KA-019 | 讨论权限、验证码邮件、生产模型和 API 变更查询的第一命中直接回答问题 | 固定真实查询 |
 
 ## 失败处理
 
