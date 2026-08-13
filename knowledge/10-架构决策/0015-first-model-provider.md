@@ -6,7 +6,7 @@ summary: "首个主 Agent 模型选择 DeepSeek V4 Pro，通过 ModelProvider �
 scope: ["decisions"]
 tags: ["arcmind-v2", "decisions"]
 confidence: "high"
-last_verified: "2026-08-06"
+last_verified: "2026-08-13"
 ---
 
 # 决策 0015：首个主 Agent 模型使用 DeepSeek V4 Pro
@@ -20,7 +20,7 @@ last_verified: "2026-08-06"
 - 运行时边界：[产品 Agent Runtime 协作模型](../20-Agent运行时/01-产品Agent运行时协作模型.md)
 - 技术入口：[技术选型与决策门禁](../09-技术调研/01-技术选型与决策门禁.md)
 - 事件通道：[文字闭环使用 SSE 事件通道](./0014-sse-text-event-channel.md)
-- 落实台账：[第一阶段开发入口门禁](../14-开发方案/0009-phase-1-entry-gate.md)
+- 历史落实台账：[已替代的第一阶段开发入口门禁](../14-开发方案/0009-phase-1-entry-gate.md)
 
 ## 背景
 

@@ -6,7 +6,7 @@ summary: "首版公网入口使用固定 IPv4、Caddy 和 Let's Encrypt 短期 I
 scope: ["decisions"]
 tags: ["arcmind-v2", "decisions"]
 confidence: "high"
-last_verified: "2026-08-06"
+last_verified: "2026-08-13"
 ---
 
 # 决策 0013：固定公网 IP 的可信 HTTPS 基线
@@ -20,7 +20,7 @@ last_verified: "2026-08-06"
 - 架构结果：[安全与部署边界](../08-安全与合规/01-安全与部署边界.md)、[手机 Web 端模块](../06-前端设计/01-手机Web端设计.md)
 - 技术门禁：[技术选型与决策门禁](../09-技术调研/01-技术选型与决策门禁.md)
 - 验收标准：[第一阶段设计就绪验收](../11-测试与验收/02-phase-1-design-acceptance.md)
-- 落实台账：[第一阶段开发入口门禁](../14-开发方案/0009-phase-1-entry-gate.md)
+- 历史落实台账：[已替代的第一阶段开发入口门禁](../14-开发方案/0009-phase-1-entry-gate.md)
 
 ## 背景
 

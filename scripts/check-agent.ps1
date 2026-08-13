@@ -69,6 +69,168 @@ function Test-MarkdownLinks {
                 Add-Issue "Broken Markdown link in '$($File.FullName.Substring($Root.Length + 1))': $Target"
             }
         }
+        foreach ($Match in [regex]::Matches($Content, '(?<!!)\[([^\]]+)\]\(([^)]+)\)')) {
+            $Label = $Match.Groups[1].Value.Trim()
+            if ($File.FullName -notmatch '[\\/]99-归档[\\/]' -and $Label -match '^docs/') {
+                Add-Issue "Legacy docs path used as Markdown label in '$($File.FullName.Substring($Root.Length + 1))': $Label"
+            }
+        }
+    }
+}
+
+function Test-KnowledgeSemantics {
+    if (-not (Test-Path -LiteralPath $Vault -PathType Container)) { return }
+    $ExcludedPattern = '[\\/](90-模板|99-归档|_attachments)[\\/]'
+    $ForbiddenCurrentPhrases = @(
+        '当前 OpenAPI 机器契约和运行代码仍是验证码旧版本',
+        '代码仍待迁移',
+        '当前仍待迁移的旧实现',
+        '代码与部署仍待迁移',
+        '代码、迁移、机器契约和部署待实施'
+    )
+    $Documents = @(Get-ChildItem -LiteralPath $Vault -Recurse -File -Filter '*.md' | Where-Object {
+        $_.FullName -notmatch $ExcludedPattern
+    })
+    foreach ($Document in $Documents) {
+        $Content = Get-Content -LiteralPath $Document.FullName -Raw -Encoding UTF8
+        $Status = Get-FrontmatterValue $Content 'status'
+        if ($Status -eq 'deprecated' -and $Content -match '(?m)^状态：\s*accepted\s*$') {
+            Add-Issue "Deprecated knowledge retains an accepted body status: $($Document.FullName.Substring($Root.Length + 1))"
+        }
+        if ($Status -ne 'current') { continue }
+        foreach ($Phrase in $ForbiddenCurrentPhrases) {
+            if ($Content.Contains($Phrase)) {
+                Add-Issue "Current knowledge contains a stale implementation phrase in '$($Document.FullName.Substring($Root.Length + 1))': $Phrase"
+            }
+        }
+    }
+}
+
+function Test-TaskMapStatuses {
+    $PlanRoot = Join-Path $Vault '14-开发方案'
+    $MapPath = Join-Path $PlanRoot '00-开发方案地图.md'
+    if (-not (Test-Path -LiteralPath $MapPath -PathType Leaf)) { return }
+    $Content = Get-Content -LiteralPath $MapPath -Raw -Encoding UTF8
+    $ExpectedBySection = @{
+        '已完成台账' = @('done')
+        '当前台账' = @('confirmed', 'active')
+        '已替代台账' = @('superseded')
+    }
+    foreach ($Section in $ExpectedBySection.Keys) {
+        $Match = [regex]::Match(
+            $Content,
+            '(?ms)^##\s+' + [regex]::Escape($Section) + '\s*$\s*(.*?)(?=^##\s+|\z)'
+        )
+        if (-not $Match.Success) {
+            Add-Issue "Task map is missing section: $Section"
+            continue
+        }
+        foreach ($Link in [regex]::Matches($Match.Groups[1].Value, '\[[^\]]+\]\(\./(\d{4}-[^)]+\.md)\)')) {
+            $FileName = $Link.Groups[1].Value
+            $TaskPath = Join-Path $PlanRoot $FileName
+            if (-not (Test-Path -LiteralPath $TaskPath -PathType Leaf)) { continue }
+            $TaskContent = Get-Content -LiteralPath $TaskPath -Raw -Encoding UTF8
+            $Status = Get-FrontmatterValue $TaskContent 'status'
+            if ($ExpectedBySection[$Section] -notcontains $Status) {
+                Add-Issue "Task map section '$Section' conflicts with $FileName status '$Status'"
+            }
+        }
+    }
+    foreach ($Task in @(Get-ChildItem -LiteralPath $PlanRoot -File -Filter '*.md' | Where-Object {
+        $_.Name -match '^\d{4}-'
+    })) {
+        $ReferenceCount = [regex]::Matches(
+            $Content,
+            '\[[^\]]+\]\(\./' + [regex]::Escape($Task.Name) + '\)'
+        ).Count
+        if ($ReferenceCount -ne 1) {
+            Add-Issue "Task map must list $($Task.Name) exactly once; found $ReferenceCount"
+        }
+    }
+}
+
+function Test-SupersededTaskLinks {
+    $PlanRoot = Join-Path $Vault '14-开发方案'
+    $Documents = @(Get-ChildItem -LiteralPath $Vault -Recurse -File -Filter '*.md' | Where-Object {
+        $_.FullName -notmatch '[\\/](14-开发方案|90-模板|99-归档|_attachments)[\\/]'
+    })
+    foreach ($Document in $Documents) {
+        $Content = Get-Content -LiteralPath $Document.FullName -Raw -Encoding UTF8
+        if ((Get-FrontmatterValue $Content 'status') -ne 'current') { continue }
+        foreach ($Match in [regex]::Matches($Content, '(?<!!)\[([^\]]+)\]\(([^)]+)\)')) {
+            $Label = $Match.Groups[1].Value.Trim()
+            $Target = $Match.Groups[2].Value.Trim()
+            if ($Target -match '^(https?://|#|mailto:)') { continue }
+            $PathPart = ($Target -split '#', 2)[0]
+            if ([string]::IsNullOrWhiteSpace($PathPart)) { continue }
+            $Decoded = [Uri]::UnescapeDataString($PathPart).Replace('/', '\')
+            $Resolved = [IO.Path]::GetFullPath((Join-Path $Document.DirectoryName $Decoded))
+            if (-not $Resolved.StartsWith($PlanRoot, [StringComparison]::OrdinalIgnoreCase)) { continue }
+            if (-not (Test-Path -LiteralPath $Resolved -PathType Leaf)) { continue }
+            $TaskContent = Get-Content -LiteralPath $Resolved -Raw -Encoding UTF8
+            if ((Get-FrontmatterValue $TaskContent 'status') -ne 'superseded') { continue }
+            if ($Label -notmatch '(历史|已替代|废弃|追溯)') {
+                Add-Issue "Current knowledge links to a superseded task without a history label: $($Document.FullName.Substring($Root.Length + 1)) -> $Label"
+            }
+        }
+    }
+}
+
+function Test-LocalIndexContents {
+    $IndexRoot = Join-Path $Root '.agent-context/local-index'
+    if (-not (Test-Path -LiteralPath $IndexRoot -PathType Container)) { return }
+    foreach ($Entry in @(Get-ChildItem -LiteralPath $IndexRoot -Force)) {
+        if ($Entry.Name -ne 'index.json') {
+            Add-Issue "Local index contains a non-index artifact: .agent-context/local-index/$($Entry.Name)"
+        }
+    }
+}
+
+function Test-RepositoryKnowledgeConsistency {
+    $RepositoryDocument = Join-Path $Vault '03-系统架构/02-代码仓库与可部署应用.md'
+    if (Test-Path -LiteralPath $RepositoryDocument -PathType Leaf) {
+        $Content = Get-Content -LiteralPath $RepositoryDocument -Raw -Encoding UTF8
+        if ($Content -match '(?m)^\s*[├└]─\s+docs/') {
+            Add-Issue 'Current repository structure still lists the legacy docs directory'
+        }
+        if ($Content -notmatch '(?m)^\s*[├└]─\s+knowledge/') {
+            Add-Issue 'Current repository structure must list the knowledge directory'
+        }
+    }
+
+    $ModelsPath = Join-Path $Root 'apps/cloud-server/src/arcmind_cloud/models.py'
+    $DataDocument = Join-Path $Vault '05-数据模型/01-数据存储事务与检索.md'
+    if (
+        (Test-Path -LiteralPath $ModelsPath -PathType Leaf) -and
+        (Test-Path -LiteralPath $DataDocument -PathType Leaf)
+    ) {
+        $Models = Get-Content -LiteralPath $ModelsPath -Raw -Encoding UTF8
+        $Data = Get-Content -LiteralPath $DataDocument -Raw -Encoding UTF8
+        $Section = [regex]::Match(
+            $Data,
+            '(?ms)^##\s+当前物理表\s*$\s*(.*?)(?=^##\s+|\z)'
+        )
+        if (-not $Section.Success) {
+            Add-Issue 'Data knowledge is missing the current physical tables section'
+        }
+        else {
+            foreach ($Match in [regex]::Matches($Models, '__tablename__\s*=\s*["'']([^"'']+)["'']')) {
+                $TableName = $Match.Groups[1].Value
+                if ($Section.Groups[1].Value -notmatch ('`' + [regex]::Escape($TableName) + '`')) {
+                    Add-Issue "Current physical tables section is missing ORM table: $TableName"
+                }
+            }
+        }
+    }
+
+    $CurrentFacts = Join-Path $Vault '00-入口/当前事实与变更入口.md'
+    if (Test-Path -LiteralPath $CurrentFacts -PathType Leaf) {
+        $Content = Get-Content -LiteralPath $CurrentFacts -Raw -Encoding UTF8
+        foreach ($Layer in @('目标设计', '仓库实现', '生产运行', '历史记录')) {
+            if (-not $Content.Contains($Layer)) {
+                Add-Issue "Current facts entry is missing fact layer: $Layer"
+            }
+        }
     }
 }
 
@@ -291,6 +453,11 @@ Test-KnowledgeLayout
 Test-KnowledgeRecords
 Test-KnowledgeStatusLinks
 Test-TaskCapsules
+Test-KnowledgeSemantics
+Test-TaskMapStatuses
+Test-SupersededTaskLinks
+Test-LocalIndexContents
+Test-RepositoryKnowledgeConsistency
 
 if ($Issues.Count -gt 0) {
     Write-Host 'Agent project check failed:' -ForegroundColor Red

@@ -48,7 +48,7 @@ last_verified: "2026-08-13"
 | `GET` | `/me` | 获取当前用户和基础偏好 | accepted |
 | `PATCH` | `/me/preferences` | 更新时区、语言和交互偏好 | accepted |
 
-登录只接收账号和密码；成功响应设置 `__Host-arcmind_session` 安全 Cookie，正文不返回会话令牌。错误账号和错误密码统一使用 `AUTH_INVALID_CREDENTIALS`，不得泄露用户登记情况。当前 OpenAPI 机器契约和运行代码仍是验证码旧版本，必须在[任务舱 0016](../14-开发方案/0016-simple-login-and-database-hardening.md)中与前后端实现同步切换。
+登录只接收账号和密码；成功响应设置 `__Host-arcmind_session` 安全 Cookie，正文不返回会话令牌。错误账号和错误密码统一使用 `AUTH_INVALID_CREDENTIALS`，不得泄露用户登记情况。当前仓库 OpenAPI 机器契约和运行代码已经完成切换；最近一次有证据的生产状态仍是验证码旧版本，部署进度见[任务舱 0016](../14-开发方案/0016-simple-login-and-database-hardening.md)。
 
 ## 会话资源
 
