@@ -12,6 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
 const authState = vi.hoisted(() => ({ authenticated: false }));
+const particleCoreState = vi.hoisted(() => ({
+  renders: [] as Array<{ mode: string; tokenPulse: number }>,
+}));
 const apiMocks = vi.hoisted(() => ({
   cancelResponse: vi.fn(),
   conversation: vi.fn(),
@@ -46,7 +49,16 @@ vi.mock("./api", async () => {
 });
 
 vi.mock("./visual/ParticleCore", () => ({
-  ParticleCore: () => <div data-testid="particle-core" />,
+  ParticleCore: ({
+    mode,
+    signal,
+  }: {
+    mode: string;
+    signal: { tokenPulse: number };
+  }) => {
+    particleCoreState.renders.push({ mode, tokenPulse: signal.tokenPulse });
+    return <div data-testid="particle-core" />;
+  },
 }));
 
 class FakeEventSource {
@@ -87,6 +99,7 @@ describe("App", () => {
 
   beforeEach(() => {
     authState.authenticated = false;
+    particleCoreState.renders.length = 0;
     sessionStorage.clear();
     FakeEventSource.latest = null;
     Object.defineProperty(Element.prototype, "scrollIntoView", {
@@ -164,6 +177,7 @@ describe("App", () => {
     );
 
     const input = await screen.findByRole("textbox", { name: "输入消息" });
+    const particleCore = screen.getByTestId("particle-core");
     fireEvent.change(input, { target: { value: "测试流式回复" } });
     fireEvent.click(screen.getByRole("button", { name: "发送" }));
 
@@ -174,6 +188,12 @@ describe("App", () => {
       FakeEventSource.latest?.emit("response.delta", { text: "第二段" });
     });
     expect(await screen.findByText("第一段第二段")).toBeInTheDocument();
+    expect(screen.getByTestId("particle-core")).toBe(particleCore);
+    expect(particleCoreState.renders.at(-1)).toEqual({ mode: "thinking", tokenPulse: 1 });
+
+    const stableRenderCount = particleCoreState.renders.length;
+    await new Promise((resolve) => window.setTimeout(resolve, 260));
+    expect(particleCoreState.renders).toHaveLength(stableRenderCount);
 
     act(() => {
       FakeEventSource.latest?.emit("response.snapshot", {
