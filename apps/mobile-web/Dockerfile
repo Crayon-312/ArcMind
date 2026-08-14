@@ -4,6 +4,7 @@ RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
 WORKDIR /workspace
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+COPY patches/agent-context-os@0.2.0.patch patches/agent-context-os@0.2.0.patch
 COPY apps/mobile-web/package.json apps/mobile-web/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 RUN pnpm install --frozen-lockfile --filter @arcmind/mobile-web...
