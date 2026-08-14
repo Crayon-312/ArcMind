@@ -6,13 +6,13 @@ summary: "手机端通过版本化 HTTPS API 操作身份、会话和任务，�
 scope: ["contracts"]
 tags: ["arcmind-v2", "contracts"]
 confidence: "medium"
-last_verified: "2026-08-13"
+last_verified: "2026-08-14"
 ---
 
 # 云端公开 API 契约草案
 
 状态：draft
-最后校验日期：2026-08-06
+最后校验日期：2026-08-14
 
 ## 关系导航
 
@@ -42,13 +42,13 @@ last_verified: "2026-08-13"
 
 | 方法 | 路径 | 用途 | 状态 |
 |---|---|---|---|
-| `POST` | `/auth/session` | 使用单一账号密码创建 Web 会话 | proposed |
+| `POST` | `/auth/session` | 使用后台预置的单一账号密码创建 Web 会话 | accepted |
 | `DELETE` | `/auth/sessions/current` | 退出当前会话 | accepted |
 | `DELETE` | `/auth/sessions` | 撤销当前用户全部 Web 会话 | accepted |
 | `GET` | `/me` | 获取当前用户和基础偏好 | accepted |
 | `PATCH` | `/me/preferences` | 更新时区、语言和交互偏好 | accepted |
 
-登录只接收账号和密码；成功响应设置 `__Host-arcmind_session` 安全 Cookie，正文不返回会话令牌。错误账号和错误密码统一使用 `AUTH_INVALID_CREDENTIALS`，不得泄露用户登记情况。当前仓库 OpenAPI 机器契约和运行代码已经完成切换；最近一次有证据的生产状态仍是验证码旧版本，部署进度见[任务舱 0016](../14-开发方案/0016-simple-login-and-database-hardening.md)。
+身份公开面只包含登录、退出、会话恢复和会话撤销，不提供注册、邀请、验证码或找回密码接口。登录只接收账号和密码；成功响应设置 `__Host-arcmind_session` 安全 Cookie，正文不返回会话令牌。错误账号和错误密码统一使用 `AUTH_INVALID_CREDENTIALS`，不得泄露账户存在性。当前仓库 OpenAPI 机器契约和运行代码已经完成切换；最近一次有证据的生产状态仍是验证码旧版本，部署进度见[任务舱 0016](../14-开发方案/0016-simple-login-and-database-hardening.md)。
 
 ## 会话资源
 
@@ -132,4 +132,4 @@ last_verified: "2026-08-13"
 ## 待定项
 
 - 大型产物上传、下载和临时访问契约。
-- 账号密码身份接口以及任务、实时语音、工作机、提醒和记忆资源的机器契约；当前机器契约仍记录待迁移的验证码旧实现。
+- 任务、实时语音、工作机、提醒和记忆资源的机器契约；账号密码身份与文字响应机器契约已经定稿并进入仓库实现。

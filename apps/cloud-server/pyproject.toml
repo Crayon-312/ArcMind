@@ -5,7 +5,6 @@ description = "ArcMind V2 cloud runtime"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "alembic>=1.16,<2",
-  "email-validator>=2.2,<3",
   "fastapi>=0.116,<1",
   "httpx>=0.28,<1",
   "pydantic-settings>=2.10,<3",

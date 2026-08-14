@@ -6,7 +6,7 @@ summary: "手机 Web 使用 React、TypeScript 和 Vite，结合 React Router、
 scope: ["decisions"]
 tags: ["arcmind-v2", "decisions"]
 confidence: "high"
-last_verified: "2026-07-30"
+last_verified: "2026-08-14"
 ---
 
 # 决策 0006：手机 Web 技术栈
@@ -23,7 +23,7 @@ last_verified: "2026-07-30"
 
 ## 背景
 
-手机端是前台打开即用的 Web 应用，首版负责注册登录、文字与实时语音交互、任务确认、进度和消息，不需要 SEO、服务端渲染、后台持续通话或原生系统控制。
+手机端是前台打开即用的 Web 应用，首版使用后台预置的单一账号密码登录且不提供公共注册，并负责文字与实时语音交互、任务确认、进度和消息；不需要 SEO、服务端渲染、后台持续通话或原生系统控制。
 
 ## 决策
 

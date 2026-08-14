@@ -86,7 +86,16 @@ function Test-KnowledgeSemantics {
         '代码仍待迁移',
         '当前仍待迁移的旧实现',
         '代码与部署仍待迁移',
-        '代码、迁移、机器契约和部署待实施'
+        '代码、迁移、机器契约和部署待实施',
+        '用户可以完成身份注册、登录和退出',
+        '注册、登录、退出和会话失效界面',
+        '完成注册登录',
+        '提供注册、登录、退出和会话恢复界面',
+        '身份入口 | 注册、登录、恢复和异常提示',
+        '当前页面仍是验证码旧实现',
+        '当前机器契约仍记录待迁移的验证码旧实现',
+        '首版负责注册登录',
+        '身份与访问 | 注册、登录、会话生命周期'
     )
     $Documents = @(Get-ChildItem -LiteralPath $Vault -Recurse -File -Filter '*.md' | Where-Object {
         $_.FullName -notmatch $ExcludedPattern

@@ -9,6 +9,12 @@ CONTRACT_PATH = (
     / "knowledge/04-接口与事件/openapi/phase-1.yaml"
 )
 
+EXPECTED_PUBLIC_AUTH_PATHS = {
+    "/auth/session",
+    "/auth/sessions/current",
+    "/auth/sessions",
+}
+
 
 def test_reviewed_operations_match_fastapi(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv(
@@ -72,3 +78,33 @@ def test_reviewed_operations_match_fastapi(monkeypatch: MonkeyPatch) -> None:
                     ]
                     == reviewed_success["content"]["application/json"]["schema"]
                 )
+
+
+def test_public_auth_surface_excludes_registration_and_otp(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "ARCMIND_DATABASE_URL",
+        "postgresql+psycopg://arcmind:test@localhost/arcmind",
+    )
+    monkeypatch.setenv("ARCMIND_PUBLIC_ORIGIN", "https://127.0.0.1")
+    monkeypatch.setenv("ARCMIND_LOGIN_USERNAME", "owner")
+    monkeypatch.setenv("ARCMIND_PROOF_SECRET", "a" * 32)
+
+    from arcmind_cloud.main import app
+
+    reviewed = cast(
+        dict[str, Any],
+        yaml.safe_load(CONTRACT_PATH.read_text(encoding="utf-8")),
+    )
+    reviewed_auth_paths = {
+        path for path in reviewed["paths"] if path.startswith("/auth/")
+    }
+    generated_auth_paths = {
+        path.removeprefix("/api/v1")
+        for path in app.openapi()["paths"]
+        if path.startswith("/api/v1/auth/")
+    }
+
+    assert reviewed_auth_paths == EXPECTED_PUBLIC_AUTH_PATHS
+    assert generated_auth_paths == EXPECTED_PUBLIC_AUTH_PATHS
