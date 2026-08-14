@@ -46,7 +46,10 @@ async def create_queued_response(
     state: str = "queued",
 ) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
     async with session_factory() as database:
-        user = User(email=f"{uuid.uuid4()}@example.invalid")
+        user = User(
+            username=f"test-{uuid.uuid4().hex[:12]}",
+            password_digest="test-password-digest",  # noqa: S106
+        )
         database.add(user)
         await database.flush()
         conversation = Conversation(
@@ -77,7 +80,10 @@ async def create_queued_response(
 @pytest.mark.asyncio
 async def test_enqueue_uses_the_domain_transaction() -> None:
     async with session_factory() as database:
-        user = User(email=f"{uuid.uuid4()}@example.invalid")
+        user = User(
+            username=f"test-{uuid.uuid4().hex[:12]}",
+            password_digest="test-password-digest",  # noqa: S106
+        )
         database.add(user)
         await database.flush()
         conversation = Conversation(

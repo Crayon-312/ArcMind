@@ -54,23 +54,26 @@ async def reset_domain_data() -> None:
 
 
 @pytest.mark.asyncio
-async def test_password_login_binds_the_existing_user_without_losing_data() -> None:
+async def test_password_login_preserves_the_existing_owner_and_data() -> None:
     await reset_domain_data()
     settings = get_settings()
     wrong_password = "wrong-password"  # noqa: S105
     test_password = "test-password"  # noqa: S105
     settings.login_password_hash = SecretStr(hash_password(test_password))
     async with session_factory() as database:
-        legacy_user = User(email="legacy@example.invalid")
-        database.add(legacy_user)
+        owner = User(
+            username=settings.login_username,
+            password_digest=hash_password("previous-password"),
+        )
+        database.add(owner)
         await database.flush()
         conversation = Conversation(
-            user_id=legacy_user.id,
+            user_id=owner.id,
             idempotency_key=f"legacy-{uuid.uuid4()}",
         )
         database.add(conversation)
         await database.commit()
-        legacy_user_id = legacy_user.id
+        owner_id = owner.id
         conversation_id = conversation.id
 
     async with session_factory() as database:
@@ -95,14 +98,14 @@ async def test_password_login_binds_the_existing_user_without_losing_data() -> N
         )
 
     async with session_factory() as database:
-        bound_user = await database.get(User, legacy_user_id)
+        bound_user = await database.get(User, owner_id)
         preserved_conversation = await database.get(Conversation, conversation_id)
         session_count = await database.scalar(
             select(func.count())
             .select_from(AuthSession)
-            .where(AuthSession.user_id == legacy_user_id)
+            .where(AuthSession.user_id == owner_id)
         )
-    assert current_user.id == legacy_user_id
+    assert current_user.id == owner_id
     assert bound_user is not None
     assert bound_user.username == settings.login_username
     assert bound_user.password_digest == settings.effective_login_password_hash
@@ -241,7 +244,6 @@ async def test_http_login_sets_the_secure_cookie_and_restores_the_session() -> N
 async def create_conversation_auth() -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
     async with session_factory() as database:
         user = User(
-            email=f"{uuid.uuid4()}@example.invalid",
             username=f"user-{uuid.uuid4().hex[:12]}",
             password_digest=get_settings().effective_login_password_hash,
         )

@@ -30,9 +30,8 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email: Mapped[str | None] = mapped_column(String(320), unique=True)
-    username: Mapped[str | None] = mapped_column(String(64), unique=True)
-    password_digest: Mapped[str | None] = mapped_column(String(255))
+    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    password_digest: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
     locale: Mapped[str] = mapped_column(String(35), default="zh-CN", nullable=False)
     time_zone: Mapped[str] = mapped_column(String(64), default="Asia/Shanghai", nullable=False)

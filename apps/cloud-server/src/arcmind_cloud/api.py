@@ -180,14 +180,6 @@ async def create_auth_session(
     user = await database.scalar(
         select(User).where(User.username == username).with_for_update()
     )
-    if user is None and username == settings.login_username:
-        user = await database.scalar(
-            select(User)
-            .where(User.username.is_(None))
-            .order_by(User.created_at, User.id)
-            .limit(1)
-            .with_for_update()
-        )
     encoded = settings.effective_login_password_hash
     credentials_valid = username == settings.login_username and verify_password(
         payload.password, encoded
@@ -201,8 +193,6 @@ async def create_auth_session(
         user = User(username=settings.login_username, password_digest=encoded)
         database.add(user)
         await database.flush()
-    if user.username is None:
-        user.username = settings.login_username
     if user.password_digest != encoded:
         user.password_digest = encoded
     now = utc_now()

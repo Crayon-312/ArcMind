@@ -56,17 +56,27 @@ def test_durable_response_migration_pairs_legacy_creation_order() -> None:
                 """
                 INSERT INTO users (
                     id, email, status, locale, time_zone, created_at
-                ) VALUES (
+                ) VALUES
+                (
                     '00000000-0000-4000-8000-000000000001',
                     'migration@example.invalid',
                     'active',
                     'zh-CN',
                     'Asia/Shanghai',
                     '2026-08-07T00:00:00Z'
+                ),
+                (
+                    '00000000-0000-4000-8000-000000000003',
+                    'legacy-second@example.invalid',
+                    'active',
+                    'zh-CN',
+                    'Asia/Shanghai',
+                    '2026-08-07T00:00:01Z'
                 );
                 INSERT INTO conversations (
                     id, user_id, idempotency_key, mode, state, version, created_at
-                ) VALUES (
+                ) VALUES
+                (
                     '00000000-0000-4000-8000-000000000002',
                     '00000000-0000-4000-8000-000000000001',
                     'migration-conversation',
@@ -74,6 +84,28 @@ def test_durable_response_migration_pairs_legacy_creation_order() -> None:
                     'active',
                     1,
                     '2026-08-07T00:00:00Z'
+                ),
+                (
+                    '00000000-0000-4000-8000-000000000004',
+                    '00000000-0000-4000-8000-000000000003',
+                    'migration-conversation',
+                    'text',
+                    'active',
+                    1,
+                    '2026-08-07T00:00:01Z'
+                );
+                INSERT INTO auth_sessions (
+                    id, user_id, token_digest, state, created_at, last_seen_at,
+                    absolute_expires_at, revoked_at
+                ) VALUES (
+                    '00000000-0000-4000-8000-000000000040',
+                    '00000000-0000-4000-8000-000000000003',
+                    repeat('a', 64),
+                    'active',
+                    '2026-08-07T00:00:01Z',
+                    '2026-08-07T00:00:01Z',
+                    '2026-09-07T00:00:01Z',
+                    NULL
                 );
                 INSERT INTO assistant_responses (
                     id, conversation_id, user_id, idempotency_key, state,
@@ -100,6 +132,17 @@ def test_durable_response_migration_pairs_legacy_creation_order() -> None:
                     2,
                     '2026-08-07T00:01:01.000Z',
                     '2026-08-07T00:01:02Z'
+                ),
+                (
+                    '00000000-0000-4000-8000-000000000030',
+                    '00000000-0000-4000-8000-000000000004',
+                    '00000000-0000-4000-8000-000000000003',
+                    'migration-response-1',
+                    'completed',
+                    'legacy second response',
+                    2,
+                    '2026-08-07T00:02:01.000Z',
+                    '2026-08-07T00:02:02Z'
                 );
                 INSERT INTO turns (
                     id, conversation_id, role, content, finality, created_at
@@ -119,6 +162,14 @@ def test_durable_response_migration_pairs_legacy_creation_order() -> None:
                     'second request',
                     'final',
                     '2026-08-07T00:01:01.002Z'
+                ),
+                (
+                    '00000000-0000-4000-8000-000000000031',
+                    '00000000-0000-4000-8000-000000000004',
+                    'user',
+                    'legacy second request',
+                    'final',
+                    '2026-08-07T00:02:01.002Z'
                 );
                 """
             )
@@ -142,7 +193,49 @@ def test_durable_response_migration_pairs_legacy_creation_order() -> None:
                 uuid.UUID("00000000-0000-4000-8000-000000000020"),
                 uuid.UUID("00000000-0000-4000-8000-000000000021"),
             ),
+            (
+                uuid.UUID("00000000-0000-4000-8000-000000000030"),
+                uuid.UUID("00000000-0000-4000-8000-000000000031"),
+            ),
         ]
+
+        with psycopg.connect(migration_dsn) as database:
+            users = database.execute(
+                "SELECT id, username, password_digest FROM users"
+            ).fetchall()
+            conversation_owners = database.execute(
+                "SELECT DISTINCT user_id FROM conversations"
+            ).fetchall()
+            conversation_keys = database.execute(
+                "SELECT idempotency_key FROM conversations ORDER BY idempotency_key"
+            ).fetchall()
+            response_owners = database.execute(
+                "SELECT DISTINCT user_id FROM assistant_responses"
+            ).fetchall()
+            response_keys = database.execute(
+                "SELECT idempotency_key FROM assistant_responses ORDER BY idempotency_key"
+            ).fetchall()
+            session_count = database.execute(
+                "SELECT count(*) FROM auth_sessions"
+            ).fetchone()
+            email_column_count = database.execute(
+                """
+                SELECT count(*)
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'users'
+                  AND column_name = 'email'
+                """
+            ).fetchone()
+
+        owner_id = uuid.UUID("00000000-0000-4000-8000-000000000001")
+        assert users == [(owner_id, "owner", "pending-deployment-password")]
+        assert conversation_owners == [(owner_id,)]
+        assert len(conversation_keys) == len(set(conversation_keys)) == 2
+        assert response_owners == [(owner_id,)]
+        assert len(response_keys) == len(set(response_keys)) == 3
+        assert session_count == (0,)
+        assert email_column_count == (0,)
 
         run_alembic(migration_database_url, "downgrade", "20260807_0001")
         run_alembic(migration_database_url, "upgrade", "head")
