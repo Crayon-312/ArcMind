@@ -198,9 +198,10 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [responseId, setResponseId] = useState<string | null>(null);
   const [tokenPulse, setTokenPulse] = useState(0);
   const [errorPulse, setErrorPulse] = useState(0);
-  const [composerOpen, setComposerOpen] = useState(true);
+  const [composerOpen, setComposerOpen] = useState(false);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const composerFocusInsideRef = useRef(false);
   const lastVisualTokenPulseAtRef = useRef(0);
 
   const conversation = useQuery({
@@ -306,6 +307,7 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
     setTokenPulse(0);
     lastVisualTokenPulseAtRef.current = 0;
     setTranscriptOpen(true);
+    setComposerOpen(false);
 
     try {
       let activeId = conversationId;
@@ -321,12 +323,13 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
       await queryClient.invalidateQueries({ queryKey: ["conversation", activeId] });
       listen(accepted.event_stream_url, activeId);
     } catch (reason) {
+      setComposerOpen(true);
       setErrorPulse((value) => value + 1);
       setError(reason instanceof Error ? reason.message : "发送失败，请重试。");
     }
   };
 
-  const composerVisible = composerOpen || isResponding;
+  const composerVisible = composerOpen;
 
   return (
     <main
@@ -344,6 +347,22 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
         <BrandAnchor />
 
         <div className="runtime-actions">
+          {isResponding && responseId && (
+            <button
+              className="tool-icon-button is-active"
+              type="button"
+              title="停止生成"
+              aria-label="停止生成"
+              disabled={cancel.isPending}
+              onClick={() => cancel.mutate(responseId)}
+            >
+              {cancel.isPending ? (
+                <LoaderCircle className="spin" size={16} aria-hidden="true" />
+              ) : (
+                <Square size={15} aria-hidden="true" />
+              )}
+            </button>
+          )}
           <button
             className={`tool-icon-button ${transcriptOpen ? "is-active" : ""}`}
             type="button"
@@ -395,7 +414,11 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
           <MessageList conversation={conversation.data} streaming={streaming} />
         </section>
 
-        <div className="composer-zone">
+        <div
+          className="composer-zone"
+          onPointerEnter={() => setComposerOpen(true)}
+          onMouseEnter={() => setComposerOpen(true)}
+        >
           <button
             className="composer-handle"
             type="button"
@@ -420,7 +443,27 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
           <span />
         </div>
 
-        <footer className={`composer is-text-only ${composerVisible ? "is-open" : ""}`}>
+        <footer
+          className={`composer is-text-only ${composerVisible ? "is-open" : ""}`}
+          onPointerEnter={() => setComposerOpen(true)}
+          onMouseEnter={() => setComposerOpen(true)}
+          onPointerLeave={() => {
+            if (!draft.trim() && !composerFocusInsideRef.current) setComposerOpen(false);
+          }}
+          onFocusCapture={() => {
+            composerFocusInsideRef.current = true;
+          }}
+          onBlurCapture={(event) => {
+            if (
+              !event.relatedTarget ||
+              !(event.relatedTarget instanceof Node) ||
+              !event.currentTarget.contains(event.relatedTarget)
+            ) {
+              composerFocusInsideRef.current = false;
+              if (!draft.trim()) setComposerOpen(false);
+            }
+          }}
+        >
           {!isResponding && (
             <button
               className="composer-collapse-button"
@@ -438,23 +481,13 @@ function ChatScreen({ onLoggedOut }: { onLoggedOut: () => void }) {
               maxLength={20_000}
               placeholder="输入文字消息..."
               value={draft}
+              disabled={isResponding}
               onChange={(event) => setDraft(event.target.value)}
             />
-            {isResponding && responseId ? (
-              <button
-                className="icon-button send-button"
-                disabled={cancel.isPending}
-                onClick={() => cancel.mutate(responseId)}
-                title="停止生成"
-                aria-label="停止生成"
-                type="button"
-              >
-                {cancel.isPending ? (
-                  <LoaderCircle className="spin" size={18} aria-hidden="true" />
-                ) : (
-                  <Square size={16} aria-hidden="true" />
-                )}
-              </button>
+            {isResponding ? (
+              <span className="composer-busy-indicator" aria-hidden="true">
+                <Square size={14} />
+              </span>
             ) : (
               <button
                 className="icon-button send-button"

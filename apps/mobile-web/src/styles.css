@@ -1448,6 +1448,17 @@ button:disabled {
   gap: 10px;
 }
 
+.composer-busy-indicator {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(0, 245, 212, 0.22);
+  border-radius: 8px;
+  color: var(--cyan);
+  background: rgba(0, 245, 212, 0.08);
+}
+
 .composer-error {
   position: absolute;
   left: 14px;

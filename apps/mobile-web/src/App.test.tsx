@@ -178,10 +178,15 @@ describe("App", () => {
 
     const input = await screen.findByRole("textbox", { name: "输入消息" });
     const particleCore = screen.getByTestId("particle-core");
+    const composer = input.closest(".composer");
+    expect(composer).not.toHaveClass("is-open");
+    fireEvent.click(screen.getByRole("button", { name: "展开输入框" }));
+    expect(composer).toHaveClass("is-open");
     fireEvent.change(input, { target: { value: "测试流式回复" } });
     fireEvent.click(screen.getByRole("button", { name: "发送" }));
 
     await waitFor(() => expect(FakeEventSource.latest).not.toBeNull());
+    expect(composer).not.toHaveClass("is-open");
     act(() => {
       FakeEventSource.latest?.emit("response.started");
       FakeEventSource.latest?.emit("response.delta", { text: "第一段" });
