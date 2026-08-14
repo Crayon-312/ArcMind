@@ -2,7 +2,7 @@
 id: "arcmind-release-20260814-simple-login-production"
 type: "implementation_note"
 status: "current"
-summary: "账号密码固定镜像已完成生产迁移、公网文字、受限备份和重启恢复验收，Mailpit 与公共注册链路已从运行态移除。"
+summary: "生产已收敛为唯一 owner 账号，全部历史会话完成合并，账号密码、公网文字、受限备份和重启恢复验收通过。"
 scope: ["identity", "database", "operations", "production-release"]
 tags: ["password-login", "postgresql", "deployment", "acceptance"]
 confidence: "high"
@@ -20,10 +20,10 @@ last_verified: "2026-08-14"
 
 ## 发布结果
 
-- GitHub Actions（GitHub 自动化流水线）工作流 `31765547142` 在固定提交 `bd55a08d2ce5f488eb73d0c9c8d72979c5177c48` 上通过全仓检查、PostgreSQL 迁移、36 个后端测试及 API 与 Web 镜像发布。
+- 首次账号密码切换使用固定提交 `bd55a08d2ce5f488eb73d0c9c8d72979c5177c48`；旧用户归属确认后，GitHub Actions（GitHub 自动化流水线）工作流 `31767551072` 又为固定提交 `0a986f4aaad112f94690baff516a4c0c90fb74cf` 通过全仓检查、PostgreSQL 迁移、36 个后端测试及 API 与 Web 镜像发布。
 - 生产先完成所有者账号自定义格式备份和结构检查，再升级到 `20260813_0003`、创建 `arcmind_runtime` 受限角色、切换固定镜像并用运行角色再次完成备份。
 - 生产保留原有 2 个用户及其对话、轮次、响应和事件事实；验收数据之外未删除业务数据。Mailpit（测试邮件捕获服务）、验证码登录和本机 `8025` 监听已从运行态移除。
-- 已绑定 `owner` 的旧用户拥有 9 个会话；另一个未绑定、无密码的旧用户仍拥有 3 个会话。数据保留但当前单账号不可访问，必须按[旧用户数据归属问题](../13-已知问题/legacy-user-ownership-after-login-migration.md)取得用户确认后再处理。
+- 用户确认第二个旧用户也是本人数据。生产 `20260814_0004` 将其 3 个会话和响应所有权合并到 `owner`，删除旧会话令牌和空用户，移除 `users.email` 并收紧账号字段；最终只有 1 个用户、12 个会话、单一所有权且无外键孤儿。
 - `arcmind_runtime` 无超级用户、建库、建角色、复制和绕过行级安全权限；API 与 Worker 使用该角色，结构迁移继续使用所有者角色。
 
 ## 用户行为证据
@@ -32,6 +32,7 @@ last_verified: "2026-08-14"
 - 错误账号密码返回统一未授权；正确 `owner` 账号可登录并获得具备 `Secure`、`HttpOnly`、`SameSite=Lax`、`Path=/`、无 `Domain` 的 `__Host-arcmind_session` Cookie（浏览器会话凭据）。
 - 创建会话、提交文字、SSE（服务器发送事件）增量、快照、完成、携带旧事件 ID 重连、最终助手轮次恢复、即时取消、退出和退出后会话失效通过。
 - 整栈重启后固定镜像和证书恢复，重启前会话可读取，并能继续提问、接收完成事件和持久化新轮次；重启后的 API、Web、Worker 与 PostgreSQL 均健康。
+- `owner` 能读取原未绑定用户的旧会话，并在整栈重启后继续提问、接收完整事件和持久化新轮次，证明历史数据合并后的读写闭环成立。
 - 生产登录明文未出现在 API 或 Worker 日志；重启后的核心服务日志没有新的异常。
 
 ## 队列升级证据
