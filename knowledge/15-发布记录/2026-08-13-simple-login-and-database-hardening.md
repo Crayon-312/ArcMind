@@ -2,7 +2,7 @@
 id: "arcmind-release-20260813-simple-login-database-hardening"
 type: "implementation_note"
 status: "current"
-summary: "本地代码已完成账号密码登录、两档数据库权限和会话响应并发保护，生产部署与公网验收仍待执行。"
+summary: "2026-08-13 本地实现完成账号密码、两档数据库权限和并发保护；后续生产结果由 2026-08-14 发布记录接续。"
 scope: ["identity", "database", "concurrency", "release"]
 tags: ["login", "postgresql", "idempotency", "local-release"]
 confidence: "high"
@@ -31,4 +31,4 @@ last_verified: "2026-08-13"
 
 - WSL（Windows 的 Linux 子系统）隔离 PostgreSQL 18.4 完成 35 个后端测试；受限运行账号复跑关键业务测试和 `pg_dump -Fc` 备份通过。
 - Windows 本地的异步命令入口使用兼容的 Selector 事件循环；Linux 容器路径保持标准事件循环。
-- 本记录只表示本地实现和隔离数据库验证完成，不表示生产已经部署。最近一次有证据的生产状态仍是验证码旧版本；必须按迁移前备份、迁移、队列初始化、角色刷新、启动和公网验收的顺序另行发布。
+- 本记录描述 2026-08-13 的本地实现和隔离数据库边界；后续生产切换已经完成，见[账号密码生产部署](./2026-08-14-simple-login-production-deployment.md)。历史边界不再代表当前线上状态。

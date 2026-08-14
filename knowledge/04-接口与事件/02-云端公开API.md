@@ -48,7 +48,7 @@ last_verified: "2026-08-14"
 | `GET` | `/me` | 获取当前用户和基础偏好 | accepted |
 | `PATCH` | `/me/preferences` | 更新时区、语言和交互偏好 | accepted |
 
-身份公开面只包含登录、退出、会话恢复和会话撤销，不提供注册、邀请、验证码或找回密码接口。登录只接收账号和密码；成功响应设置 `__Host-arcmind_session` 安全 Cookie，正文不返回会话令牌。错误账号和错误密码统一使用 `AUTH_INVALID_CREDENTIALS`，不得泄露账户存在性。当前仓库 OpenAPI 机器契约和运行代码已经完成切换；最近一次有证据的生产状态仍是验证码旧版本，部署进度见[任务舱 0016](../14-开发方案/0016-simple-login-and-database-hardening.md)。
+身份公开面只包含登录、退出、会话恢复和会话撤销，不提供注册、邀请、验证码或找回密码接口。登录只接收账号和密码；成功响应设置 `__Host-arcmind_session` 安全 Cookie，正文不返回会话令牌。错误账号和错误密码统一使用 `AUTH_INVALID_CREDENTIALS`，不得泄露账户存在性。当前仓库 OpenAPI 机器契约、运行代码和生产固定镜像已经完成切换，公网证据见[账号密码生产部署](../15-发布记录/2026-08-14-simple-login-production-deployment.md)。
 
 ## 会话资源
 
