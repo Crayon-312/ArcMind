@@ -48,7 +48,7 @@ def test_password_hash_round_trip_and_wrong_password() -> None:
 
 
 def test_development_password_hash_matches_the_documented_local_password() -> None:
-    config = settings()
+    config = settings(login_password_hash=None)
 
     assert verify_password("arcmind-dev", config.effective_login_password_hash)
     assert not verify_password("wrong-password", config.effective_login_password_hash)
